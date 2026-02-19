@@ -290,6 +290,26 @@ void CLevel::ClientReceive()
 				Msg("- %s", buffer);
 			}
 			break;
+		case M_H2C_SYNC_STATE:
+			{
+				u8 sync_type = P->r_u8();
+				if (sync_type == 1)
+				{
+					u16 total = P->r_u16();
+					u16 chunk_start = P->r_u16();
+					u16 chunk_count = P->r_u16();
+					for (u16 i = 0; i < chunk_count; ++i)
+					{
+						u16 object_id = P->r_u16();
+						u16 parent_id = P->r_u16();
+						if (i < 3)
+							Msg("* sync object[%u]: id=%u parent=%u", u32(chunk_start) + i, object_id, parent_id);
+					}
+					Msg("* received host object id map chunk: start=%u count=%u total=%u", chunk_start, chunk_count, total);
+				}
+			}
+			break;
+
 		case M_GAMEMESSAGE:
 			{
 				/*if (!game_configured)

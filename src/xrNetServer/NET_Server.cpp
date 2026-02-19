@@ -5,6 +5,7 @@
 #include <functional>
 
 #include "NET_Log.h"
+#include "../xrServerEntities/xrMessages.h"
 
 #pragma warning(push)
 #pragma warning(disable:4995)
@@ -106,6 +107,7 @@ IClient::IClient(CTimer* timer)
 	flags.bConnected = FALSE;
 	flags.bReconnect = FALSE;
 	flags.bVerified = TRUE;
+	runtime_id = 0;
 }
 
 IClient::~IClient()
@@ -727,12 +729,37 @@ u32 IPureServer::OnMessage(NET_Packet& P, ClientID sender) // Non-Zero means bro
 	}
 	*/
 
+	u16 m_type = 0;
+	P.r_begin(m_type);
+	switch (m_type)
+	{
+	case M_C2H_HELLO:
+		{
+			u32 runtime_id = P.r_u32();
+			IClient* cl = ID_to_client(sender, true);
+			if (cl)
+			{
+				cl->runtime_id = runtime_id;
+				Msg("* C2H_HELLO from 0x%08x runtime_id=%u", sender.value(), runtime_id);
+			}
+		}
+		break;
+	case M_C2H_ACTION_REQUEST:
+		Msg("* C2H_ACTION_REQUEST from 0x%08x", sender.value());
+		break;
+	case M_C2H_SYNC_REQUEST:
+		Msg("* C2H_SYNC_REQUEST from 0x%08x", sender.value());
+		break;
+	default:
+		break;
+	}
+
 	return 0;
 }
 
 void IPureServer::OnCL_Connected(IClient* CL)
 {
-	Msg("* Player 0x%08x connected.\n", CL->ID.value());
+	Msg("* Player 0x%08x connected (runtime_id=%u).\n", CL->ID.value(), CL->runtime_id);
 }
 
 void IPureServer::OnCL_Disconnected(IClient* CL)

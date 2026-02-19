@@ -224,6 +224,8 @@ protected:
 	virtual void Check_BuildVersion_Success(IClient* CL);
 
 	void SendConnectionData(IClient* CL);
+	void SendLevelObjectsIdMap(IClient* CL);
+	void BroadcastLevelObjectsIdMap();
 	void OnChatMessage(NET_Packet* P, xrClientData* CL);
 	void OnProcessClientMapData(NET_Packet& P, ClientID const& clientID);
 
