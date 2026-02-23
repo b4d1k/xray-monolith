@@ -258,6 +258,11 @@ void CLevel::ClientReceive()
 			break;
 		case M_SV_CONFIG_FINISHED:
 			{
+				NET_Packet syncRequest;
+				syncRequest.w_begin(M_C2H_SYNC_REQUEST);
+				syncRequest.w_u8(COOP_SYNC_REQUEST_OBJECT_ID_MAP);
+				Send(syncRequest, net_flags(TRUE, TRUE, TRUE, TRUE));
+
 				game_configured = TRUE;
 #ifdef DEBUG
 				Msg("- Game configuring : Finished ");
@@ -290,6 +295,40 @@ void CLevel::ClientReceive()
 				Msg("- %s", buffer);
 			}
 			break;
+		case M_H2C_SYNC_STATE:
+			{
+				u8 sync_type = P->r_u8();
+				if (sync_type == COOP_SYNC_OBJECT_ID_MAP)
+				{
+					u16 total = P->r_u16();
+					u16 chunk_start = P->r_u16();
+					u16 chunk_count = P->r_u16();
+
+					if (chunk_start == 0)
+					{
+						m_host_object_id_map.clear();
+						m_host_object_id_map_sync_received = false;
+					}
+
+					for (u16 i = 0; i < chunk_count; ++i)
+					{
+						u16 object_id = P->r_u16();
+						u16 parent_id = P->r_u16();
+						m_host_object_id_map[object_id] = parent_id;
+					}
+
+					const u32 received = u32(chunk_start) + u32(chunk_count);
+					if (received >= total)
+					{
+						m_host_object_id_map_sync_received = true;
+						Msg("* host object id map synchronized: total=%u", total);
+					}
+
+					Msg("* received host object id map chunk: start=%u count=%u total=%u", chunk_start, chunk_count, total);
+				}
+			}
+			break;
+
 		case M_GAMEMESSAGE:
 			{
 				/*if (!game_configured)

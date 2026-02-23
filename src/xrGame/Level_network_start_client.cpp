@@ -64,6 +64,8 @@ bool CLevel::net_start_client2()
 		}
 	}
 
+	m_host_object_id_map.clear();
+	m_host_object_id_map_sync_received = false;
 	connected_to_server = Connect2Server(*m_caClientOptions);
 
 	return true;
