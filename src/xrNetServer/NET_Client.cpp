@@ -275,6 +275,10 @@ XRNETSERVER_API int psNET_ClientPending = 2;
 XRNETSERVER_API char psNET_Name[32] = "Player";
 XRNETSERVER_API BOOL psNET_direct_connect = FALSE;
 
+#define COOP_DEFAULT_SERVER_PORT 25565
+#define COOP_DEFAULT_CLIENT_PORT 25566
+#define COOP_CLIENT_PORT_MAX 40000
+
 /****************************************************************************
  *
  * DirectPlay8 Service Provider GUIDs
@@ -420,7 +424,7 @@ BOOL IPureClient::Connect(LPCSTR options)
 				xr_strcpy(user_pass, UP);
 		}
 
-		int psSV_Port = START_PORT_LAN_SV;
+		int psSV_Port = COOP_DEFAULT_SERVER_PORT;
 		if (strstr(options, "port="))
 		{
 			string64 portstr;
@@ -431,7 +435,7 @@ BOOL IPureClient::Connect(LPCSTR options)
 		};
 
 		BOOL bPortWasSet = FALSE;
-		int psCL_Port = START_PORT_LAN_CL;
+		int psCL_Port = COOP_DEFAULT_CLIENT_PORT;
 		if (strstr(options, "portcl="))
 		{
 			string64 portstr;
@@ -575,7 +579,7 @@ BOOL IPureClient::Connect(LPCSTR options)
 					}
 
 					c_port++;
-					if (c_port > END_PORT_LAN)
+					if (c_port > COOP_CLIENT_PORT_MAX)
 					{
 						return FALSE;
 					}
@@ -628,7 +632,7 @@ BOOL IPureClient::Connect(LPCSTR options)
 			// We now have the host address so lets enum
 			u32 c_port = psCL_Port;
 			HRESULT res = S_FALSE;
-			while (res != S_OK && c_port <= END_PORT)
+			while (res != S_OK && c_port <= COOP_CLIENT_PORT_MAX)
 			{
 				R_CHK(net_Address_device->AddComponent (DPNA_KEY_PORT, &c_port, sizeof(c_port), DPNA_DATATYPE_DWORD ));
 
@@ -665,8 +669,8 @@ BOOL IPureClient::Connect(LPCSTR options)
 
 					if (bPortWasSet)
 					{
-						Msg("! IPureClient : port %d is BUSY!", c_port);
-						return FALSE;
+						Msg("! IPureClient : requested local client port %d is BUSY, searching next free port...", c_port);
+						bPortWasSet = FALSE;
 					}
 #ifdef DEBUG
 				else
