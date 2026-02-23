@@ -69,6 +69,7 @@ protected:
 	s32 net_TimeDelta;
 	s32 net_TimeDelta_Calculated;
 	s32 net_TimeDelta_User;
+	u32 m_runtime_client_id;
 
 	void Sync_Thread();
 	void Sync_Average();
@@ -125,6 +126,7 @@ public:
 	IClientStatistic& GetStatistic() { return net_Statistic; }
 	void UpdateStatistic();
 	ClientID const& GetClientID() { return net_ClientID; };
+	IC u32 RuntimeClientId() const { return m_runtime_client_id; }
 
 	bool GetServerAddress(ip_address& pAddress, DWORD* pPort);
 

@@ -4,6 +4,7 @@
 #include "net_server.h"
 #include "net_messages.h"
 #include "NET_Log.h"
+#include "../xrServerEntities/xrMessages.h"
 
 #pragma warning(push)
 #pragma warning(disable:4995)
@@ -363,6 +364,7 @@ IPureClient::IPureClient(CTimer* timer): net_Statistic(timer)
 	net_Time_LastUpdate = 0;
 	net_TimeDelta = 0;
 	net_TimeDelta_Calculated = 0;
+	m_runtime_client_id = 0;
 
 	pClNetLog = NULL; //xr_new<INetLog>("logs\\net_cl_log.log", timeServer());
 }
@@ -513,6 +515,8 @@ BOOL IPureClient::Connect(LPCSTR options)
 		WCHAR ClientNameUNICODE [256];
 		R_CHK(MultiByteToWideChar (CP_ACP, 0, user_name_str, -1, ClientNameUNICODE, 256 ));
 
+		m_runtime_client_id = ::Random.randI(1u, u32(-1));
+
 		{
 			DPN_PLAYER_INFO Pinfo;
 			ZeroMemory(&Pinfo, sizeof(Pinfo));
@@ -522,6 +526,7 @@ BOOL IPureClient::Connect(LPCSTR options)
 
 			SClientConnectData cl_data;
 			cl_data.process_id = GetCurrentProcessId();
+			cl_data.runtime_id = m_runtime_client_id;
 			xr_strcpy(cl_data.name, user_name_str);
 			xr_strcpy(cl_data.pass, user_pass);
 
@@ -561,8 +566,8 @@ BOOL IPureClient::Connect(LPCSTR options)
 
 					if (bPortWasSet)
 					{
-						Msg("! IPureClient : port %d is BUSY!", c_port);
-						return FALSE;
+						Msg("! IPureClient : requested local client port %d is BUSY, searching next free port...", c_port);
+						bPortWasSet = FALSE;
 					}
 					else
 					{
@@ -911,6 +916,14 @@ HRESULT IPureClient::net_Handler(u32 dwMessageType, PVOID pMessage)
 						DXTRACE_ERR(tmp, pMsg->hResultCode);
 					}					
 #endif
+					if (pMsg->hResultCode == S_OK)
+					{
+						NET_Packet helloPacket;
+						helloPacket.w_begin(M_C2H_HELLO);
+						helloPacket.w_u32(m_runtime_client_id);
+						Send(helloPacket, net_flags(TRUE, TRUE, TRUE, TRUE));
+						Msg("* Sent C2H_HELLO runtime_id=%u", m_runtime_client_id);
+					}
 					if (pMsg->dwApplicationReplyDataSize)
 					{
 						string256 ResStr = "";
