@@ -8,6 +8,7 @@
 struct SClientConnectData
 {
 	ClientID clientID;
+	u32 runtime_id;
 	string64 name;
 	string64 pass;
 	u32 process_id;
@@ -15,6 +16,7 @@ struct SClientConnectData
 	SClientConnectData()
 	{
 		name[0] = pass[0] = 0;
+		runtime_id = 0;
 		process_id = 0;
 	}
 };
@@ -69,6 +71,7 @@ public:
 	IClientStatistic stats;
 
 	ClientID ID;
+	u32 runtime_id;
 	string128 m_guid;
 	shared_str name;
 	shared_str pass;
