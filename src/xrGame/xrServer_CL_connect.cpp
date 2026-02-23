@@ -287,14 +287,9 @@ bool xrServer::NeedToCheckClient_BuildVersion(IClient* CL)
 	VERIFY(tmp_client);
 	PerformSecretKeysSync(tmp_client);
 
-	// Co-op/single listen server should never enter MP auth challenge flow.
-	// In some startup windows IsGameTypeSingle() can still be unreliable,
-	// therefore we gate by both global game type and server game id.
-	if (IsGameTypeSingle() || (GameID() == eGameIDSingle))
-	{
-		Msg("* NeedToCheckClient_BuildVersion: skipped for single/co-op client 0x%08x", CL->ID.value());
+	// Co-op single listen server should not block on MP auth challenge flow.
+	if (IsGameTypeSingle())
 		return false;
-	}
 
 	if (g_SV_Disable_Auth_Check) return false;
 	CL->flags.bVerified = FALSE;
