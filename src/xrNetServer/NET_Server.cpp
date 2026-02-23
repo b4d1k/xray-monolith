@@ -305,6 +305,7 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 	string64 password_str = "";
 	u32 dwMaxPlayers = 0;
 	bool has_maxplayers_option = false;
+	bool force_single_coop_defaults = false;
 
 
 	//sertanly we can use game_descr structure for determinig level_name, but for backward compatibility we save next line...
@@ -330,6 +331,15 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 			strncpy_s(tmpStr, sMaxPlayers, 63);
 		dwMaxPlayers = atol(tmpStr);
 	}
+	if (single_mode && !has_maxplayers_option)
+	{
+		// Force co-op listen server defaults when scripts still use old single command.
+		dwMaxPlayers = 32;
+		has_maxplayers_option = true;
+		force_single_coop_defaults = true;
+		Msg("* single/co-op bootstrap: forcing defaults maxplayers=32 portsv=25565.");
+	}
+
 	if (dwMaxPlayers > 32 || dwMaxPlayers < 1) dwMaxPlayers = 32;
 #ifdef DEBUG
 	Msg("MaxPlayers = %d", dwMaxPlayers);
@@ -350,9 +360,11 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 
 	//-------------------------------------------------------------------
 	BOOL bPortWasSet = FALSE;
+	bool has_portsv_option = false;
 	u32 dwServerPort = START_PORT_LAN_SV;
 	if (strstr(options, "portsv="))
 	{
+		has_portsv_option = true;
 		const char* ServerPort = strstr(options, "portsv=") + 7;
 		string64 tmpStr = "";
 		if (strchr(ServerPort, '/'))
@@ -362,6 +374,12 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 		dwServerPort = atol(tmpStr);
 		clamp(dwServerPort, u32(START_PORT), u32(END_PORT));
 		bPortWasSet = TRUE; //this is not casual game
+	}
+
+	if (force_single_coop_defaults && !has_portsv_option)
+	{
+		dwServerPort = 25565;
+		bPortWasSet = TRUE;
 	}
 	//-------------------------------------------------------------------
 
