@@ -3,8 +3,11 @@
 #include "NET_Common.h"
 #include "net_server.h"
 #include <functional>
+#include <algorithm>
+#include <ws2tcpip.h>
 
 #include "NET_Log.h"
+#include "../xrServerEntities/xrMessages.h"
 
 #pragma warning(push)
 #pragma warning(disable:4995)
@@ -25,6 +28,53 @@ XRNETSERVER_API int psNET_ServerUpdate = 30; // FPS
 XRNETSERVER_API int psNET_ServerPending = 3;
 
 XRNETSERVER_API ClientID BroadcastCID(0xffffffff);
+
+
+static void LogServerConnectHints(u32 server_port)
+{
+	Msg("* Connect to server using port=%u", server_port);
+	Msg("* Example: start client(127.0.0.1/port=%u/name=Player/pass=12345)", server_port);
+
+	char host_name[256] = {};
+	if (gethostname(host_name, sizeof(host_name)) != 0)
+	{
+		Msg("! Unable to resolve local host name for connection hints (WSA=%d)", WSAGetLastError());
+		return;
+	}
+
+	addrinfo hints = {};
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	addrinfo* results = nullptr;
+	if (getaddrinfo(host_name, nullptr, &hints, &results) != 0)
+	{
+		Msg("! Unable to enumerate local IPv4 addresses for connection hints");
+		return;
+	}
+
+	xr_vector<xr_string> unique_addresses;
+	for (addrinfo* it = results; it != nullptr; it = it->ai_next)
+	{
+		if (!it->ai_addr || it->ai_family != AF_INET)
+			continue;
+
+		const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(it->ai_addr);
+		char ip_buffer[INET_ADDRSTRLEN] = {};
+		if (!inet_ntop(AF_INET, &addr->sin_addr, ip_buffer, sizeof(ip_buffer)))
+			continue;
+
+		xr_string ip = ip_buffer;
+		if (std::find(unique_addresses.begin(), unique_addresses.end(), ip) == unique_addresses.end())
+			unique_addresses.push_back(ip);
+	}
+
+	freeaddrinfo(results);
+
+	for (const xr_string& ip : unique_addresses)
+		Msg("* Local server endpoint: %s:%u", ip.c_str(), server_port);
+}
 
 void ip_address::set(LPCSTR src_string)
 {
@@ -106,6 +156,7 @@ IClient::IClient(CTimer* timer)
 	flags.bConnected = FALSE;
 	flags.bReconnect = FALSE;
 	flags.bVerified = TRUE;
+	runtime_id = 0;
 }
 
 IClient::~IClient()
@@ -246,15 +297,14 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 {
 	connect_options = options;
 	psNET_direct_connect = FALSE;
-
-	if (strstr(options, "/single"))
-		psNET_direct_connect = TRUE;
+	const bool single_mode = !!strstr(options, "/single");
 
 	// Parse options
 	string4096 session_name;
 
 	string64 password_str = "";
 	u32 dwMaxPlayers = 0;
+	bool has_maxplayers_option = false;
 
 
 	//sertanly we can use game_descr structure for determinig level_name, but for backward compatibility we save next line...
@@ -271,6 +321,7 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 	}
 	if (strstr(options, "maxplayers="))
 	{
+		has_maxplayers_option = true;
 		const char* sMaxPlayers = strstr(options, "maxplayers=") + 11;
 		string64 tmpStr = "";
 		if (strchr(sMaxPlayers, '/'))
@@ -283,6 +334,19 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 #ifdef DEBUG
 	Msg("MaxPlayers = %d", dwMaxPlayers);
 #endif // #ifdef DEBUG
+
+	if (single_mode)
+	{
+		if (!has_maxplayers_option || dwMaxPlayers <= 1)
+		{
+			psNET_direct_connect = TRUE;
+			Msg("* single mode: direct-connect server (no remote clients).");
+		}
+		else
+		{
+			Msg("* single/co-op mode: listen server enabled (maxplayers=%d).", dwMaxPlayers);
+		}
+	}
 
 	//-------------------------------------------------------------------
 	BOOL bPortWasSet = FALSE;
@@ -426,6 +490,7 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 			else
 			{
 				Msg("- IPureServer : created on port %d!", psNET_Port);
+				LogServerConnectHints(psNET_Port);
 			}
 		};
 
@@ -727,12 +792,34 @@ u32 IPureServer::OnMessage(NET_Packet& P, ClientID sender) // Non-Zero means bro
 	}
 	*/
 
+	u16 m_type = 0;
+	P.r_begin(m_type);
+	switch (m_type)
+	{
+	case M_C2H_HELLO:
+		{
+			u32 runtime_id = P.r_u32();
+			IClient* cl = ID_to_client(sender, true);
+			if (cl)
+			{
+				cl->runtime_id = runtime_id;
+				Msg("* C2H_HELLO from 0x%08x runtime_id=%u", sender.value(), runtime_id);
+			}
+		}
+		break;
+	case M_C2H_ACTION_REQUEST:
+		Msg("* C2H_ACTION_REQUEST from 0x%08x", sender.value());
+		break;
+	default:
+		break;
+	}
+
 	return 0;
 }
 
 void IPureServer::OnCL_Connected(IClient* CL)
 {
-	Msg("* Player 0x%08x connected.\n", CL->ID.value());
+	Msg("* Player 0x%08x connected (runtime_id=%u).\n", CL->ID.value(), CL->runtime_id);
 }
 
 void IPureServer::OnCL_Disconnected(IClient* CL)
