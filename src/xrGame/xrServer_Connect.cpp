@@ -97,6 +97,7 @@ IClient* xrServer::new_client(SClientConnectData* cl_data)
 	// copy entity
 	CL->ID = cl_data->clientID;
 	CL->process_id = cl_data->process_id;
+	CL->runtime_id = cl_data->runtime_id;
 	CL->name = cl_data->name; //only for offline mode
 	CL->pass._set(cl_data->pass);
 
