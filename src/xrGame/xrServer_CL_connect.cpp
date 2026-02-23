@@ -278,6 +278,9 @@ bool xrServer::NeedToCheckClient_BuildVersion(IClient* CL)
 	VERIFY(tmp_client);
 	PerformSecretKeysSync(tmp_client);
 
+	// Co-op single listen server should not block on MP auth challenge flow.
+	if (IsGameTypeSingle())
+		return false;
 
 	if (g_SV_Disable_Auth_Check) return false;
 	CL->flags.bVerified = FALSE;
