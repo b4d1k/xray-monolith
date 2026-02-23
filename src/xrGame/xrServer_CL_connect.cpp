@@ -38,8 +38,17 @@ void xrServer::Perform_connect_spawn(CSE_Abstract* E, xrClientData* CL, NET_Pack
 		if (E->s_flags.is(M_SPAWN_OBJECT_ASPLAYER))
 		{
 			CL->owner = E;
-			VERIFY(CL->ps);
-			E->set_name_replace(CL->ps->getName());
+			if (CL->ps)
+			{
+				E->set_name_replace(CL->ps->getName());
+			}
+			else
+			{
+				// In single/co-op listen flow player-state can be created slightly later.
+				// Do not crash on connect spawn; use client name as a temporary fallback.
+				E->set_name_replace(*CL->name ? CL->name.c_str() : "mp_actor");
+				Msg("! Perform_connect_spawn: missing player state for 0x%08x, using fallback actor name", CL->ID.value());
+			}
 		}
 
 		// Associate
