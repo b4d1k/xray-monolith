@@ -524,8 +524,7 @@ u32 xrServer::OnMessage(NET_Packet& P, ClientID sender) // Non-Zero means broadc
 			u32 ClientPing = CL->stats.getPing();
 			P.w_seek(P.r_tell() + 2, &ClientPing, 4);
 			//-------------------------------------------------------------------
-			if (SV_Client)
-				SendTo(SV_Client->ID, P, net_flags(TRUE, TRUE));
+			SendBroadcast(sender, P, net_flags(TRUE, TRUE));
 #ifdef DEBUG
 			VERIFY(verify_entities());
 #endif
@@ -622,6 +621,15 @@ u32 xrServer::OnMessage(NET_Packet& P, ClientID sender) // Non-Zero means broadc
 	case M_CLIENT_REQUEST_CONNECTION_DATA:
 		{
 			AddDelayedPacket(P, sender);
+		}
+		break;
+	case M_C2H_SYNC_REQUEST:
+		{
+			if (!CL)
+				break;
+
+			u8 sync_type = P.r_u8();
+			OnSyncRequest(CL, sync_type);
 		}
 		break;
 	case M_CHAT_MESSAGE:
@@ -1043,6 +1051,7 @@ void xrServer::create_direct_client()
 	cl_data.clientID.set(1);
 	xr_strcpy(cl_data.name, "single_player");
 	cl_data.process_id = GetCurrentProcessId();
+	cl_data.runtime_id = 1;
 
 	new_client(&cl_data);
 }
