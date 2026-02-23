@@ -4,6 +4,7 @@
 #include "xrserver_objects.h"
 #include "xrServer_Objects_Alife_Monsters.h"
 #include "Level.h"
+#include <algorithm>
 
 
 void xrServer::Perform_connect_spawn(CSE_Abstract* E, xrClientData* CL, NET_Packet& P)
@@ -37,8 +38,17 @@ void xrServer::Perform_connect_spawn(CSE_Abstract* E, xrClientData* CL, NET_Pack
 		if (E->s_flags.is(M_SPAWN_OBJECT_ASPLAYER))
 		{
 			CL->owner = E;
-			VERIFY(CL->ps);
-			E->set_name_replace(CL->ps->getName());
+			if (CL->ps)
+			{
+				E->set_name_replace(CL->ps->getName());
+			}
+			else
+			{
+				// In single/co-op listen flow player-state can be created slightly later.
+				// Do not crash on connect spawn; use client name as a temporary fallback.
+				E->set_name_replace(*CL->name ? CL->name.c_str() : "mp_actor");
+				Msg("! Perform_connect_spawn: missing player state for 0x%08x, using fallback actor name", CL->ID.value());
+			}
 		}
 
 		// Associate
@@ -65,6 +75,83 @@ void xrServer::Perform_connect_spawn(CSE_Abstract* E, xrClientData* CL, NET_Pack
 	E->net_Processed = TRUE;
 }
 
+
+void xrServer::SendLevelObjectsIdMap(IClient* _CL)
+{
+	xrClientData* CL = (xrClientData*)_CL;
+	if (!CL)
+		return;
+
+	xr_vector<u16> ids;
+	ids.reserve(entities.size());
+	for (xrS_entities::const_iterator it = entities.begin(); it != entities.end(); ++it)
+		ids.push_back(it->first);
+
+	std::sort(ids.begin(), ids.end());
+
+	const u16 total = (u16)ids.size();
+	const u16 chunk_size = 256;
+
+	for (u16 chunk_start = 0; chunk_start < total; chunk_start = u16(chunk_start + chunk_size))
+	{
+		const u16 chunk_count = std::min<u16>(chunk_size, u16(total - chunk_start));
+
+		NET_Packet P;
+		P.w_begin(M_H2C_SYNC_STATE);
+		P.w_u8(COOP_SYNC_OBJECT_ID_MAP); // sync payload type: full object id map (chunked)
+		P.w_u16(total);
+		P.w_u16(chunk_start);
+		P.w_u16(chunk_count);
+
+		for (u16 i = 0; i < chunk_count; ++i)
+		{
+			CSE_Abstract* E = ID_to_entity(ids[chunk_start + i]);
+			VERIFY(E);
+			P.w_u16(E->ID);
+			P.w_u16(E->ID_Parent);
+		}
+
+		SendTo(CL->ID, P, net_flags(TRUE, TRUE));
+	}
+}
+
+
+
+void xrServer::OnSyncRequest(IClient* _CL, u8 sync_type)
+{
+	xrClientData* CL = static_cast<xrClientData*>(_CL);
+	if (!CL || !CL->net_Accepted)
+		return;
+
+	switch (sync_type)
+	{
+	case COOP_SYNC_REQUEST_OBJECT_ID_MAP:
+		SendLevelObjectsIdMap(CL);
+		break;
+	default:
+		Msg("* unsupported C2H_SYNC_REQUEST type=%u from 0x%08x", sync_type, CL->ID.value());
+		break;
+	}
+}
+
+void xrServer::BroadcastLevelObjectsIdMap()
+{
+	struct Sender
+	{
+		xrServer* self;
+		void operator()(IClient* client)
+		{
+			xrClientData* cl = static_cast<xrClientData*>(client);
+			if (!cl || !cl->net_Accepted)
+				return;
+			self->SendLevelObjectsIdMap(cl);
+		}
+	};
+
+	Sender sender = { this };
+	ForEachClientDoSender(sender);
+}
+
 void xrServer::SendConfigFinished(ClientID const& clientId)
 {
 	NET_Packet P;
@@ -84,6 +171,7 @@ void xrServer::SendConnectionData(IClient* _CL)
 
 	// Start to send server logo and rules
 	SendServerInfoToClient(CL->ID);
+	SendLevelObjectsIdMap(CL);
 
 	/*
 		Msg("--- Our sended SPAWN IDs:");
@@ -119,6 +207,7 @@ void xrServer::OnCL_Connected(IClient* _CL)
 	}
 
 	game->OnPlayerConnect(CL->ID);
+	BroadcastLevelObjectsIdMap();
 }
 
 void xrServer::SendConnectResult(IClient* CL, u8 res, u8 res1, char* ResultStr)
@@ -198,6 +287,14 @@ bool xrServer::NeedToCheckClient_BuildVersion(IClient* CL)
 	VERIFY(tmp_client);
 	PerformSecretKeysSync(tmp_client);
 
+	// Co-op/single listen server should never enter MP auth challenge flow.
+	// In some startup windows IsGameTypeSingle() can still be unreliable,
+	// therefore we gate by both global game type and server game id.
+	if (IsGameTypeSingle() || (GameID() == eGameIDSingle))
+	{
+		Msg("* NeedToCheckClient_BuildVersion: skipped for single/co-op client 0x%08x", CL->ID.value());
+		return false;
+	}
 
 	if (g_SV_Disable_Auth_Check) return false;
 	CL->flags.bVerified = FALSE;
