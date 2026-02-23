@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "level.h"
+#include "game_cl_base.h"
 #include "xrServerMapSync.h"
 #include "../xrCore/stream_reader.h"
 #include "MainMenu.h"
@@ -36,7 +37,7 @@ bool CLevel::IsChecksumsEqual(u32 check_sum) const
 
 bool CLevel::synchronize_map_data()
 {
-	if (!OnClient() && !IsDemoSave())
+	if ((!OnClient() && !IsDemoSave()) || (game && game->Type() == eGameIDSingle))
 	{
 		deny_m_spawn = FALSE;
 		map_data.m_map_sync_received = true;
