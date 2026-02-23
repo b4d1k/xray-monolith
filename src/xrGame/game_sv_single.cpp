@@ -35,6 +35,39 @@ void game_sv_Single::Create(shared_str& options)
 	switch_Phase(GAME_PHASE_INPROGRESS);
 }
 
+void game_sv_Single::OnPlayerConnect(ClientID id_who)
+{
+	inherited::OnPlayerConnect(id_who);
+
+	xrClientData* client = m_server->ID_to_client(id_who);
+	if (!client || !client->ps)
+		return;
+
+	client->net_PassUpdates = TRUE;
+
+	if (client->owner)
+		return;
+
+	CSE_Abstract* entity = spawn_begin("mp_actor");
+	if (!entity)
+		return;
+
+	entity->set_name_replace(get_name_id(id_who));
+	entity->s_flags.assign(M_SPAWN_OBJECT_LOCAL | M_SPAWN_OBJECT_ASPLAYER);
+
+	if (CSE_ALifeCreatureActor* actor = smart_cast<CSE_ALifeCreatureActor*>(entity))
+	{
+		actor->s_team = 0;
+		assign_RP(actor, client->ps);
+	}
+
+	spawn_end(entity, id_who);
+	if (client->owner)
+		client->ps->SetGameID(client->owner->ID);
+
+	Msg("* single/co-op bootstrap: %s connected as mp_actor [%d]", get_name_id(id_who), entity->ID);
+}
+
 /**
 CSE_Abstract*		game_sv_Single::get_entity_from_eid		(u16 id)
 {
