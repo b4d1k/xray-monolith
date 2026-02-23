@@ -58,6 +58,13 @@ string64 PacketName[] = {
 	"M_MOVE_PLAYERS",
 	"M_MOVE_PLAYERS_RESPOND",
 
+	"M_C2H_HELLO",
+	"M_H2C_WELCOME",
+	"M_C2H_ACTION_REQUEST",
+	"M_H2C_ACTION_RESULT",
+	"M_C2H_SYNC_REQUEST",
+	"M_H2C_SYNC_STATE",
+
 	"MSG_FORCEDWORD"
 };
 //---------------------------------------------------------
