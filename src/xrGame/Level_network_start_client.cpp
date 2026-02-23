@@ -101,8 +101,11 @@ bool CLevel::net_start_client3()
 			download_url = get_net_DescriptionData().download_url;
 			rescan_mp_archives(); //because if we are using psNET_direct_connect, we not download map...
 		}
-		// Determine internal level-ID
+		// Determine internal level-ID.
+		// First try MP lookup, then fallback to local single-level lookup for co-op campaign maps.
 		int level_id = pApp->Level_ID(level_name, level_ver, true);
+		if (level_id == -1)
+			level_id = pApp->Level_ID(level_name, level_ver, false);
 		if (level_id == -1)
 		{
 			Disconnect();
