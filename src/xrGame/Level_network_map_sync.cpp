@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "level.h"
+#include "game_cl_base.h"
 #include "xrServerMapSync.h"
 #include "../xrCore/stream_reader.h"
 #include "MainMenu.h"
