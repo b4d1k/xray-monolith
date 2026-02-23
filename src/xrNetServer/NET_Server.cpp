@@ -3,6 +3,8 @@
 #include "NET_Common.h"
 #include "net_server.h"
 #include <functional>
+#include <algorithm>
+#include <ws2tcpip.h>
 
 #include "NET_Log.h"
 #include "../xrServerEntities/xrMessages.h"
@@ -26,6 +28,53 @@ XRNETSERVER_API int psNET_ServerUpdate = 30; // FPS
 XRNETSERVER_API int psNET_ServerPending = 3;
 
 XRNETSERVER_API ClientID BroadcastCID(0xffffffff);
+
+
+static void LogServerConnectHints(u32 server_port)
+{
+	Msg("* Connect to server using port=%u", server_port);
+	Msg("* Example: start client(127.0.0.1/port=%u/name=Player/pass=12345)", server_port);
+
+	char host_name[256] = {};
+	if (gethostname(host_name, sizeof(host_name)) != 0)
+	{
+		Msg("! Unable to resolve local host name for connection hints (WSA=%d)", WSAGetLastError());
+		return;
+	}
+
+	addrinfo hints = {};
+	hints.ai_family = AF_INET;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = IPPROTO_TCP;
+
+	addrinfo* results = nullptr;
+	if (getaddrinfo(host_name, nullptr, &hints, &results) != 0)
+	{
+		Msg("! Unable to enumerate local IPv4 addresses for connection hints");
+		return;
+	}
+
+	xr_vector<xr_string> unique_addresses;
+	for (addrinfo* it = results; it != nullptr; it = it->ai_next)
+	{
+		if (!it->ai_addr || it->ai_family != AF_INET)
+			continue;
+
+		const sockaddr_in* addr = reinterpret_cast<const sockaddr_in*>(it->ai_addr);
+		char ip_buffer[INET_ADDRSTRLEN] = {};
+		if (!inet_ntop(AF_INET, &addr->sin_addr, ip_buffer, sizeof(ip_buffer)))
+			continue;
+
+		xr_string ip = ip_buffer;
+		if (std::find(unique_addresses.begin(), unique_addresses.end(), ip) == unique_addresses.end())
+			unique_addresses.push_back(ip);
+	}
+
+	freeaddrinfo(results);
+
+	for (const xr_string& ip : unique_addresses)
+		Msg("* Local server endpoint: %s:%u", ip.c_str(), server_port);
+}
 
 void ip_address::set(LPCSTR src_string)
 {
@@ -428,6 +477,7 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 			else
 			{
 				Msg("- IPureServer : created on port %d!", psNET_Port);
+				LogServerConnectHints(psNET_Port);
 			}
 		};
 
