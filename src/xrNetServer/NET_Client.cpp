@@ -566,8 +566,8 @@ BOOL IPureClient::Connect(LPCSTR options)
 
 					if (bPortWasSet)
 					{
-						Msg("! IPureClient : port %d is BUSY!", c_port);
-						return FALSE;
+						Msg("! IPureClient : requested local client port %d is BUSY, searching next free port...", c_port);
+						bPortWasSet = FALSE;
 					}
 					else
 					{
