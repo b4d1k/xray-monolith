@@ -331,13 +331,15 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 			strncpy_s(tmpStr, sMaxPlayers, 63);
 		dwMaxPlayers = atol(tmpStr);
 	}
-	if (single_mode && !has_maxplayers_option)
+	const bool force_coop_from_cmdline = !!strstr(Core.Params, "-coop_force_single_listen");
+	if (single_mode && !has_maxplayers_option && force_coop_from_cmdline)
 	{
-		// Force co-op listen server defaults when scripts still use old single command.
+		// Optional compatibility mode for legacy scripts:
+		// keep old script command, but force listen-server defaults only when explicitly requested.
 		dwMaxPlayers = 32;
 		has_maxplayers_option = true;
 		force_single_coop_defaults = true;
-		Msg("* single/co-op bootstrap: forcing defaults maxplayers=32 portsv=25565.");
+		Msg("* single/co-op bootstrap: forcing defaults maxplayers=32 portsv=25565 (flag: -coop_force_single_listen).");
 	}
 
 	if (dwMaxPlayers > 32 || dwMaxPlayers < 1) dwMaxPlayers = 32;
@@ -350,7 +352,7 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 		if (!has_maxplayers_option || dwMaxPlayers <= 1)
 		{
 			psNET_direct_connect = TRUE;
-			Msg("* single mode: direct-connect server (no remote clients).");
+			Msg("* single mode: direct-connect server (no remote clients). Use -coop_force_single_listen to force host defaults.");
 		}
 		else
 		{
