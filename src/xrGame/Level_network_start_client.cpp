@@ -244,8 +244,19 @@ bool CLevel::net_start_client6()
 	if (connected_to_server)
 	{
 		// Sync
-		if (!synchronize_map_data())
+		const bool local_single_host = Server && !!strstr(m_caServerOptions.c_str(), "/single");
+		if (local_single_host)
+		{
+			// For single/co-op listen startup, bypass MP map-sync branch and perform direct client sync.
+			deny_m_spawn = FALSE;
+			map_data.m_map_sync_received = true;
+			if (!synchronize_client())
+				return false;
+		}
+		else if (!synchronize_map_data())
+		{
 			return false;
+		}
 
 		if (!game_configured)
 		{
