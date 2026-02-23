@@ -297,15 +297,14 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 {
 	connect_options = options;
 	psNET_direct_connect = FALSE;
-
-	if (strstr(options, "/single"))
-		psNET_direct_connect = TRUE;
+	const bool single_mode = !!strstr(options, "/single");
 
 	// Parse options
 	string4096 session_name;
 
 	string64 password_str = "";
 	u32 dwMaxPlayers = 0;
+	bool has_maxplayers_option = false;
 
 
 	//sertanly we can use game_descr structure for determinig level_name, but for backward compatibility we save next line...
@@ -322,6 +321,7 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 	}
 	if (strstr(options, "maxplayers="))
 	{
+		has_maxplayers_option = true;
 		const char* sMaxPlayers = strstr(options, "maxplayers=") + 11;
 		string64 tmpStr = "";
 		if (strchr(sMaxPlayers, '/'))
@@ -334,6 +334,19 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 #ifdef DEBUG
 	Msg("MaxPlayers = %d", dwMaxPlayers);
 #endif // #ifdef DEBUG
+
+	if (single_mode)
+	{
+		if (!has_maxplayers_option || dwMaxPlayers <= 1)
+		{
+			psNET_direct_connect = TRUE;
+			Msg("* single mode: direct-connect server (no remote clients).");
+		}
+		else
+		{
+			Msg("* single/co-op mode: listen server enabled (maxplayers=%d).", dwMaxPlayers);
+		}
+	}
 
 	//-------------------------------------------------------------------
 	BOOL bPortWasSet = FALSE;
