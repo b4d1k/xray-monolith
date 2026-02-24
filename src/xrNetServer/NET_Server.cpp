@@ -305,6 +305,7 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 	string64 password_str = "";
 	u32 dwMaxPlayers = 0;
 	bool has_maxplayers_option = false;
+	bool force_single_coop_defaults = false;
 
 
 	//sertanly we can use game_descr structure for determinig level_name, but for backward compatibility we save next line...
@@ -330,12 +331,15 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 			strncpy_s(tmpStr, sMaxPlayers, 63);
 		dwMaxPlayers = atol(tmpStr);
 	}
-	if (single_mode && !has_maxplayers_option)
+	const bool force_coop_from_cmdline = !!strstr(Core.Params, "-coop_force_single_listen");
+	if (single_mode && !has_maxplayers_option && force_coop_from_cmdline)
 	{
-		// Co-op first: single mode always runs as listen server.
+		// Optional compatibility mode for legacy scripts:
+		// keep old script command, but force listen-server defaults only when explicitly requested.
 		dwMaxPlayers = 32;
 		has_maxplayers_option = true;
-		Msg("* single/co-op mode: defaulting maxplayers=32.");
+		force_single_coop_defaults = true;
+		Msg("* single/co-op bootstrap: forcing defaults maxplayers=32 portsv=25565 (flag: -coop_force_single_listen).");
 	}
 
 	if (dwMaxPlayers > 32 || dwMaxPlayers < 1) dwMaxPlayers = 32;
@@ -345,15 +349,24 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 
 	if (single_mode)
 	{
-		psNET_direct_connect = FALSE;
-		Msg("* single/co-op mode: listen server enabled (maxplayers=%d).", dwMaxPlayers);
+		if (!has_maxplayers_option || dwMaxPlayers <= 1)
+		{
+			psNET_direct_connect = TRUE;
+			Msg("* single mode: direct-connect server (no remote clients). Use -coop_force_single_listen to force host defaults.");
+		}
+		else
+		{
+			Msg("* single/co-op mode: listen server enabled (maxplayers=%d).", dwMaxPlayers);
+		}
 	}
 
 	//-------------------------------------------------------------------
 	BOOL bPortWasSet = FALSE;
+	bool has_portsv_option = false;
 	u32 dwServerPort = START_PORT_LAN_SV;
 	if (strstr(options, "portsv="))
 	{
+		has_portsv_option = true;
 		const char* ServerPort = strstr(options, "portsv=") + 7;
 		string64 tmpStr = "";
 		if (strchr(ServerPort, '/'))
@@ -365,6 +378,11 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 		bPortWasSet = TRUE; //this is not casual game
 	}
 
+	if (force_single_coop_defaults && !has_portsv_option)
+	{
+		dwServerPort = 25565;
+		bPortWasSet = TRUE;
+	}
 	//-------------------------------------------------------------------
 
 	if (!psNET_direct_connect)
