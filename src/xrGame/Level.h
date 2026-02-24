@@ -151,6 +151,7 @@ public:
 private:
 	bool m_bConnectResultReceived;
 	bool m_bConnectResult;
+	bool m_profile_data_sent = false;
 	xr_string m_sConnectResult;
 
 public:

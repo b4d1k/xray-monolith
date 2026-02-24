@@ -66,6 +66,7 @@ bool CLevel::net_start_client2()
 
 	m_host_object_id_map.clear();
 	m_host_object_id_map_sync_received = false;
+	m_profile_data_sent = false;
 	connected_to_server = Connect2Server(*m_caClientOptions);
 
 	return true;
@@ -205,6 +206,9 @@ bool CLevel::net_start_client4()
 
 void CLevel::ClientSendProfileData()
 {
+	if (m_profile_data_sent)
+		return;
+	m_profile_data_sent = true;
 #ifdef DEBUG
 	Msg("* Sending profile data");
 #endif
