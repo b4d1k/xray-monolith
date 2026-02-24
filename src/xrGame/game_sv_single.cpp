@@ -52,16 +52,17 @@ bool game_sv_Single::TrySpawnCoopActor(ClientID id_who)
 	}
 
 	const bool has_player_state = (client->ps != nullptr);
+	LPCSTR actor_name = has_player_state ? client->ps->getName() : (*client->name ? client->name.c_str() : "mp_actor");
 	if (!has_player_state)
 	{
-		Msg("* single/co-op bootstrap: player state is not ready yet for client 0x%08x, spawning fallback actor", id_who.value());
+		Msg("* single/co-op bootstrap: player state is not ready yet for client 0x%08x, spawning fallback actor as '%s'", id_who.value(), actor_name);
 	}
 
 	CSE_Abstract* entity = spawn_begin("mp_actor");
 	if (!entity)
 		return false;
 
-	entity->set_name_replace(get_name_id(id_who));
+	entity->set_name_replace(actor_name);
 	entity->s_flags.assign(M_SPAWN_OBJECT_LOCAL | M_SPAWN_OBJECT_ASPLAYER);
 
 	if (CSE_ALifeCreatureActor* actor = smart_cast<CSE_ALifeCreatureActor*>(entity))
@@ -84,7 +85,7 @@ bool game_sv_Single::TrySpawnCoopActor(ClientID id_who)
 	if (client->owner && client->ps)
 		client->ps->SetGameID(client->owner->ID);
 
-	Msg("* single/co-op bootstrap: %s connected as mp_actor [%d]", get_name_id(id_who), entity->ID);
+	Msg("* single/co-op bootstrap: %s connected as mp_actor [%d]", actor_name, entity->ID);
 	return !!client->owner;
 }
 
