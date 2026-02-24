@@ -35,6 +35,65 @@ void game_sv_Single::Create(shared_str& options)
 	switch_Phase(GAME_PHASE_INPROGRESS);
 }
 
+
+bool game_sv_Single::TrySpawnCoopActor(ClientID id_who)
+{
+	xrClientData* client = m_server->ID_to_client(id_who);
+	if (!client)
+		return false;
+
+	client->net_PassUpdates = TRUE;
+
+	if (client->owner)
+		return true;
+
+	if (!client->ps)
+	{
+		Msg("* single/co-op bootstrap: waiting player state for client 0x%08x", id_who.value());
+		return false;
+	}
+
+	CSE_Abstract* entity = spawn_begin("mp_actor");
+	if (!entity)
+		return false;
+
+	entity->set_name_replace(get_name_id(id_who));
+	entity->s_flags.assign(M_SPAWN_OBJECT_LOCAL | M_SPAWN_OBJECT_ASPLAYER);
+
+	if (CSE_ALifeCreatureActor* actor = smart_cast<CSE_ALifeCreatureActor*>(entity))
+	{
+		actor->s_team = 0;
+		assign_RP(actor, client->ps);
+
+		// Deterministic fallback: place new client near host actor when available.
+		xrClientData* host = m_server->GetServerClient();
+		if (host && host->owner)
+		{
+			actor->o_Position = host->owner->o_Position;
+			actor->o_Position.x += 1.0f;
+			actor->o_Angle = host->owner->o_Angle;
+		}
+	}
+
+	spawn_end(entity, id_who);
+	if (client->owner && client->ps)
+		client->ps->SetGameID(client->owner->ID);
+
+	Msg("* single/co-op bootstrap: %s connected as mp_actor [%d]", get_name_id(id_who), entity->ID);
+	return !!client->owner;
+}
+
+void game_sv_Single::OnPlayerConnect(ClientID id_who)
+{
+	inherited::OnPlayerConnect(id_who);
+	TrySpawnCoopActor(id_who);
+}
+
+void game_sv_Single::OnPlayerConnectFinished(ClientID id_who)
+{
+	TrySpawnCoopActor(id_who);
+}
+
 /**
 CSE_Abstract*		game_sv_Single::get_entity_from_eid		(u16 id)
 {
