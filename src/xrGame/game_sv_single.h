@@ -21,7 +21,13 @@ public:
 	virtual void Create(shared_str& options);
 	//	virtual		CSE_Abstract*		get_entity_from_eid		(u16 id);
 
+	virtual void OnPlayerConnect(ClientID id_who);
+	virtual void OnPlayerConnectFinished(ClientID id_who);
 
+private:
+	bool TrySpawnCoopActor(ClientID id_who);
+
+public:
 	virtual void OnCreate(u16 id_who);
 	virtual BOOL OnTouch(u16 eid_who, u16 eid_what, BOOL bForced = FALSE);
 	virtual void OnDetach(u16 eid_who, u16 eid_what);
