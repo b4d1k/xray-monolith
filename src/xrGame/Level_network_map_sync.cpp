@@ -37,7 +37,8 @@ bool CLevel::IsChecksumsEqual(u32 check_sum) const
 
 bool CLevel::synchronize_map_data()
 {
-	if ((!OnClient() && !IsDemoSave()) || (game && game->Type() == eGameIDSingle))
+	const bool force_single_coop_sync = !!strstr(Core.Params, "-coop_force_single_listen");
+	if ((!OnClient() && !IsDemoSave()) || (game && game->Type() == eGameIDSingle) || force_single_coop_sync)
 	{
 		deny_m_spawn = FALSE;
 		map_data.m_map_sync_received = true;

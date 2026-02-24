@@ -246,7 +246,8 @@ bool CLevel::net_start_client6()
 		// Sync
 		const bool local_single_host = Server && !!strstr(m_caServerOptions.c_str(), "/single");
 		const bool single_game_client = game && (game->Type() == eGameIDSingle);
-		if (local_single_host || single_game_client)
+		const bool force_single_coop_sync = !!strstr(Core.Params, "-coop_force_single_listen");
+		if (local_single_host || single_game_client || force_single_coop_sync)
 		{
 			// For single/co-op startup, bypass MP map-sync branch and perform direct client sync.
 			deny_m_spawn = FALSE;
