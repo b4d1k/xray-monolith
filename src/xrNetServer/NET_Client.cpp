@@ -4,6 +4,7 @@
 #include "net_server.h"
 #include "net_messages.h"
 #include "NET_Log.h"
+#include "../xrServerEntities/xrMessages.h"
 
 #pragma warning(push)
 #pragma warning(disable:4995)
@@ -274,6 +275,10 @@ XRNETSERVER_API int psNET_ClientPending = 2;
 XRNETSERVER_API char psNET_Name[32] = "Player";
 XRNETSERVER_API BOOL psNET_direct_connect = FALSE;
 
+#define COOP_DEFAULT_SERVER_PORT 25565
+#define COOP_DEFAULT_CLIENT_PORT 25566
+#define COOP_CLIENT_PORT_MAX 40000
+
 /****************************************************************************
  *
  * DirectPlay8 Service Provider GUIDs
@@ -363,6 +368,7 @@ IPureClient::IPureClient(CTimer* timer): net_Statistic(timer)
 	net_Time_LastUpdate = 0;
 	net_TimeDelta = 0;
 	net_TimeDelta_Calculated = 0;
+	m_runtime_client_id = 0;
 
 	pClNetLog = NULL; //xr_new<INetLog>("logs\\net_cl_log.log", timeServer());
 }
@@ -418,25 +424,23 @@ BOOL IPureClient::Connect(LPCSTR options)
 				xr_strcpy(user_pass, UP);
 		}
 
-		int psSV_Port = START_PORT_LAN_SV;
+		int psSV_Port = COOP_DEFAULT_SERVER_PORT;
 		if (strstr(options, "port="))
 		{
 			string64 portstr;
 			xr_strcpy(portstr, strstr(options, "port=") + 5);
 			if (strchr(portstr, '/')) *strchr(portstr, '/') = 0;
 			psSV_Port = atol(portstr);
-			clamp(psSV_Port, int(START_PORT), int(END_PORT));
 		};
 
 		BOOL bPortWasSet = FALSE;
-		int psCL_Port = START_PORT_LAN_CL;
+		int psCL_Port = COOP_DEFAULT_CLIENT_PORT;
 		if (strstr(options, "portcl="))
 		{
 			string64 portstr;
 			xr_strcpy(portstr, strstr(options, "portcl=") + 7);
 			if (strchr(portstr, '/')) *strchr(portstr, '/') = 0;
 			psCL_Port = atol(portstr);
-			clamp(psCL_Port, int(START_PORT), int(END_PORT));
 			bPortWasSet = TRUE;
 		};
 		//	Msg("* Client connect on port %d\n",psNET_Port);
@@ -513,6 +517,8 @@ BOOL IPureClient::Connect(LPCSTR options)
 		WCHAR ClientNameUNICODE [256];
 		R_CHK(MultiByteToWideChar (CP_ACP, 0, user_name_str, -1, ClientNameUNICODE, 256 ));
 
+		m_runtime_client_id = ::Random.randI(1u, u32(-1));
+
 		{
 			DPN_PLAYER_INFO Pinfo;
 			ZeroMemory(&Pinfo, sizeof(Pinfo));
@@ -522,6 +528,7 @@ BOOL IPureClient::Connect(LPCSTR options)
 
 			SClientConnectData cl_data;
 			cl_data.process_id = GetCurrentProcessId();
+			cl_data.runtime_id = m_runtime_client_id;
 			xr_strcpy(cl_data.name, user_name_str);
 			xr_strcpy(cl_data.pass, user_pass);
 
@@ -561,8 +568,8 @@ BOOL IPureClient::Connect(LPCSTR options)
 
 					if (bPortWasSet)
 					{
-						Msg("! IPureClient : port %d is BUSY!", c_port);
-						return FALSE;
+						Msg("! IPureClient : requested local client port %d is BUSY, searching next free port...", c_port);
+						bPortWasSet = FALSE;
 					}
 					else
 					{
@@ -570,7 +577,7 @@ BOOL IPureClient::Connect(LPCSTR options)
 					}
 
 					c_port++;
-					if (c_port > END_PORT_LAN)
+					if (c_port > COOP_CLIENT_PORT_MAX)
 					{
 						return FALSE;
 					}
@@ -623,7 +630,7 @@ BOOL IPureClient::Connect(LPCSTR options)
 			// We now have the host address so lets enum
 			u32 c_port = psCL_Port;
 			HRESULT res = S_FALSE;
-			while (res != S_OK && c_port <= END_PORT)
+			while (res != S_OK && c_port <= COOP_CLIENT_PORT_MAX)
 			{
 				R_CHK(net_Address_device->AddComponent (DPNA_KEY_PORT, &c_port, sizeof(c_port), DPNA_DATATYPE_DWORD ));
 
@@ -660,8 +667,8 @@ BOOL IPureClient::Connect(LPCSTR options)
 
 					if (bPortWasSet)
 					{
-						Msg("! IPureClient : port %d is BUSY!", c_port);
-						return FALSE;
+						Msg("! IPureClient : requested local client port %d is BUSY, searching next free port...", c_port);
+						bPortWasSet = FALSE;
 					}
 #ifdef DEBUG
 				else
@@ -911,6 +918,14 @@ HRESULT IPureClient::net_Handler(u32 dwMessageType, PVOID pMessage)
 						DXTRACE_ERR(tmp, pMsg->hResultCode);
 					}					
 #endif
+					if (pMsg->hResultCode == S_OK)
+					{
+						NET_Packet helloPacket;
+						helloPacket.w_begin(M_C2H_HELLO);
+						helloPacket.w_u32(m_runtime_client_id);
+						Send(helloPacket, net_flags(TRUE, TRUE, TRUE, TRUE));
+						Msg("* Sent C2H_HELLO runtime_id=%u", m_runtime_client_id);
+					}
 					if (pMsg->dwApplicationReplyDataSize)
 					{
 						string256 ResStr = "";

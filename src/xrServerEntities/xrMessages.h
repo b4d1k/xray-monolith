@@ -92,7 +92,25 @@ enum
 	M_CREATE_PLAYER_STATE,
 	M_COMPRESSED_UPDATE_OBJECTS,
 
+	// Custom co-op protocol extensions (IP:port host-authoritative roadmap)
+	M_C2H_HELLO,
+	M_H2C_WELCOME,
+	M_C2H_ACTION_REQUEST,
+	M_H2C_ACTION_RESULT,
+	M_C2H_SYNC_REQUEST,
+	M_H2C_SYNC_STATE,
+
 	MSG_FORCEDWORD = u32(-1)
+};
+
+enum ECoopSyncPayload : u8
+{
+	COOP_SYNC_OBJECT_ID_MAP = 1,
+};
+
+enum ECoopSyncRequest : u8
+{
+	COOP_SYNC_REQUEST_OBJECT_ID_MAP = 1,
 };
 
 enum
