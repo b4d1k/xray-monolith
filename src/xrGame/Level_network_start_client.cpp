@@ -64,6 +64,8 @@ bool CLevel::net_start_client2()
 		}
 	}
 
+	m_host_object_id_map.clear();
+	m_host_object_id_map_sync_received = false;
 	connected_to_server = Connect2Server(*m_caClientOptions);
 
 	return true;
@@ -85,7 +87,8 @@ bool CLevel::net_start_client3()
 		LPCSTR level_ver = NULL;
 		LPCSTR download_url = NULL;
 
-		if (psNET_direct_connect) //single
+		const bool local_single_host = Server && !!strstr(m_caServerOptions.c_str(), "/single");
+		if (psNET_direct_connect || local_single_host) // single/direct or local single listen-host
 		{
 			shared_str const& server_options = Server->GetConnectOptions();
 			level_name = name().c_str(); //Server->level_name		(server_options).c_str();
@@ -98,8 +101,11 @@ bool CLevel::net_start_client3()
 			download_url = get_net_DescriptionData().download_url;
 			rescan_mp_archives(); //because if we are using psNET_direct_connect, we not download map...
 		}
-		// Determine internal level-ID
+		// Determine internal level-ID.
+		// First try MP lookup, then fallback to local single-level lookup for co-op campaign maps.
 		int level_id = pApp->Level_ID(level_name, level_ver, true);
+		if (level_id == -1)
+			level_id = pApp->Level_ID(level_name, level_ver, false);
 		if (level_id == -1)
 		{
 			Disconnect();
@@ -238,11 +244,27 @@ bool CLevel::net_start_client6()
 	if (connected_to_server)
 	{
 		// Sync
-		if (!synchronize_map_data())
+		const bool local_single_host = Server && !!strstr(m_caServerOptions.c_str(), "/single");
+		const bool single_game_client = game && (game->Type() == eGameIDSingle);
+		const bool force_single_coop_sync = !!strstr(Core.Params, "-coop_force_single_listen");
+		if (local_single_host || single_game_client || force_single_coop_sync)
+		{
+			// For single/co-op startup, bypass MP map-sync branch and perform direct client sync.
+			deny_m_spawn = FALSE;
+			map_data.m_map_sync_received = true;
+			if (!synchronize_client())
+				return false;
+		}
+		else if (!synchronize_map_data())
+		{
 			return false;
+		}
 
 		if (!game_configured)
 		{
+			// Startup may still complete with delayed game configuration in co-op single/listen path.
+			// Mark net start successful to avoid false failure in CLevel::net_start6().
+			net_start_result_total = TRUE;
 			pApp->LoadEnd();
 			return true;
 		}
