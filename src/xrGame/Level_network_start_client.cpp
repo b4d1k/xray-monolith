@@ -261,6 +261,9 @@ bool CLevel::net_start_client6()
 
 		if (!game_configured)
 		{
+			// Startup may still complete with delayed game configuration in co-op single/listen path.
+			// Mark net start successful to avoid false failure in CLevel::net_start6().
+			net_start_result_total = TRUE;
 			pApp->LoadEnd();
 			return true;
 		}
