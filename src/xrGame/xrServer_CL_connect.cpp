@@ -199,10 +199,17 @@ void xrServer::OnCL_Connected(IClient* _CL)
 	Perform_game_export();
 	SendConnectionData(CL);
 
-	VERIFY2(CL->ps, "Player state not created");
 	if (!CL->ps)
 	{
-		Msg("! ERROR: Player state not created - incorect message sequence!");
+		if (IsGameTypeSingle() || (GameID() == eGameIDSingle) || (CL->runtime_id != 0))
+		{
+			Msg("! OnCL_Connected: player state is not ready yet for client 0x%08x (runtime_id=%u), deferring OnPlayerConnect to ready stage", CL->ID.value(), CL->runtime_id);
+			BroadcastLevelObjectsIdMap();
+			return;
+		}
+
+		VERIFY2(CL->ps, "Player state not created");
+		Msg("! ERROR: Player state not created - incorrect message sequence!");
 		return;
 	}
 
