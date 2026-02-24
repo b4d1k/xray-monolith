@@ -45,12 +45,16 @@ bool game_sv_Single::TrySpawnCoopActor(ClientID id_who)
 	client->net_PassUpdates = TRUE;
 
 	if (client->owner)
-		return true;
-
-	if (!client->ps)
 	{
-		Msg("* single/co-op bootstrap: waiting player state for client 0x%08x", id_who.value());
-		return false;
+		if (client->ps)
+			client->ps->SetGameID(client->owner->ID);
+		return true;
+	}
+
+	const bool has_player_state = (client->ps != nullptr);
+	if (!has_player_state)
+	{
+		Msg("* single/co-op bootstrap: player state is not ready yet for client 0x%08x, spawning fallback actor", id_who.value());
 	}
 
 	CSE_Abstract* entity = spawn_begin("mp_actor");
@@ -63,7 +67,8 @@ bool game_sv_Single::TrySpawnCoopActor(ClientID id_who)
 	if (CSE_ALifeCreatureActor* actor = smart_cast<CSE_ALifeCreatureActor*>(entity))
 	{
 		actor->s_team = 0;
-		assign_RP(actor, client->ps);
+		if (has_player_state)
+			assign_RP(actor, client->ps);
 
 		// Deterministic fallback: place new client near host actor when available.
 		xrClientData* host = m_server->GetServerClient();
