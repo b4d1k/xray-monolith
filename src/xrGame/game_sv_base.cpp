@@ -821,6 +821,8 @@ void game_sv_GameState::OnEvent(NET_Packet& tNetPacket, u16 type, u32 time, Clie
 			CL->ps = createPlayerState(&tNetPacket);
 			CL->ps->m_online_time = Level().timeServer();
 			CL->ps->DeathTime = Device.dwTimeGlobal;
+			if (CL->owner)
+				CL->ps->SetGameID(CL->owner->ID);
 
 			if (psNET_direct_connect) //IsGameTypeSingle())
 				break;
@@ -845,7 +847,13 @@ void game_sv_GameState::OnEvent(NET_Packet& tNetPacket, u16 type, u32 time, Clie
 bool game_sv_GameState::CheckNewPlayer(xrClientData* CL)
 {
 	xrGameSpyServer* gs_server = smart_cast<xrGameSpyServer*>(m_server);
-	R_ASSERT(gs_server);
+	if (!gs_server)
+	{
+		// Co-op/single listen path can use plain xrServer without GameSpy wrappers.
+		// Keep minimal validation and avoid fatal assert on non-GameSpy server implementations.
+		CheckPlayerName(CL);
+		return true;
+	}
 
 	char const* error_msg = NULL;
 	ClientID tmp_client_id(CL->ID);
