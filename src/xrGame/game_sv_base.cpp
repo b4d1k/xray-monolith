@@ -821,6 +821,8 @@ void game_sv_GameState::OnEvent(NET_Packet& tNetPacket, u16 type, u32 time, Clie
 			CL->ps = createPlayerState(&tNetPacket);
 			CL->ps->m_online_time = Level().timeServer();
 			CL->ps->DeathTime = Device.dwTimeGlobal;
+			if (CL->owner)
+				CL->ps->SetGameID(CL->owner->ID);
 
 			if (psNET_direct_connect) //IsGameTypeSingle())
 				break;
