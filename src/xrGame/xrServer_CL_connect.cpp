@@ -171,6 +171,13 @@ void xrServer::SendConnectionData(IClient* _CL)
 
 	// Start to send server logo and rules
 	SendServerInfoToClient(CL->ID);
+	if (IsGameTypeSingle() || (GameID() == eGameIDSingle) || (CL->runtime_id != 0))
+	{
+		// In co-op single/listen flow, game type can be in transition and
+		// SendServerInfoToClient may skip immediate config-finished packet.
+		// Send it explicitly to unblock client game_configured path.
+		SendConfigFinished(CL->ID);
+	}
 	SendLevelObjectsIdMap(CL);
 
 	/*
