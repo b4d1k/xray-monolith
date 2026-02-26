@@ -68,8 +68,10 @@ bool game_sv_Single::TrySpawnCoopActor(ClientID id_who)
 	if (CSE_ALifeCreatureActor* actor = smart_cast<CSE_ALifeCreatureActor*>(entity))
 	{
 		actor->s_team = 0;
-		if (has_player_state)
+		if (has_player_state && (getRPcount(actor->s_team) > 0))
 			assign_RP(actor, client->ps);
+		else if (has_player_state)
+			Msg("! single/co-op bootstrap: no respawn points for team=%u, using fallback spawn position", actor->s_team);
 
 		// Deterministic fallback: place new client near host actor when available.
 		xrClientData* host = m_server->GetServerClient();
