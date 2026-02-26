@@ -78,12 +78,12 @@ xrServer::EConnect xrServer::Connect(shared_str& session_name, GameDescriptionDa
 	Msg("* Created server_game %s",game->type_name());
 #endif
 
+	game->Create(session_name);
+
 	ZeroMemory(&game_descr, sizeof(game_descr));
 	xr_strcpy(game_descr.map_name, game->level_name(session_name.c_str()).c_str());
 	xr_strcpy(game_descr.map_version, game_sv_GameState::parse_level_version(session_name.c_str()).c_str());
 	xr_strcpy(game_descr.download_url, get_map_download_url(game_descr.map_name, game_descr.map_version));
-
-	game->Create(session_name);
 
 	return IPureServer::Connect(*session_name, game_descr);
 }
@@ -97,6 +97,7 @@ IClient* xrServer::new_client(SClientConnectData* cl_data)
 	// copy entity
 	CL->ID = cl_data->clientID;
 	CL->process_id = cl_data->process_id;
+	CL->runtime_id = cl_data->runtime_id;
 	CL->name = cl_data->name; //only for offline mode
 	CL->pass._set(cl_data->pass);
 
