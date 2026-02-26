@@ -151,6 +151,7 @@ public:
 private:
 	bool m_bConnectResultReceived;
 	bool m_bConnectResult;
+	bool m_profile_data_sent = false;
 	xr_string m_sConnectResult;
 
 public:
@@ -185,6 +186,8 @@ protected:
 	bool sended_request_connection_data;
 	void MakeReconnect();
 	LevelMapSyncData map_data;
+	xr_map<u16, u16> m_host_object_id_map;
+	bool m_host_object_id_map_sync_received = false;
 	bool synchronize_map_data();
 	bool synchronize_client();
 	bool xr_stdcall net_start1();
