@@ -393,6 +393,12 @@ bool CLevel::Connect2Server(const char* options)
 	}
 	Msg("%c client : connection %s - <%s>", m_bConnectResult ? '*' : '!', m_bConnectResult ? "accepted" : "rejected",
 	    m_sConnectResult.c_str());
+	const bool force_single_coop_sync = !!strstr(Core.Params, "-coop_force_single_listen");
+	if (m_bConnectResult && force_single_coop_sync)
+	{
+		ClientSendProfileData();
+	}
+
 	if (!m_bConnectResult)
 	{
 		if (Server)
