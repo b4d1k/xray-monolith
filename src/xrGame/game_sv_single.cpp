@@ -64,6 +64,10 @@ bool game_sv_Single::TrySpawnCoopActor(ClientID id_who)
 
 	entity->set_name_replace(actor_name);
 	entity->s_flags.assign(M_SPAWN_OBJECT_LOCAL | M_SPAWN_OBJECT_ASPLAYER);
+	if (CSE_Visual* visual = smart_cast<CSE_Visual*>(entity))
+	{
+		visual->set_visual("actors\\stalker_neutral\\stalker_neutral_1.ogf");
+	}
 
 	if (CSE_ALifeCreatureActor* actor = smart_cast<CSE_ALifeCreatureActor*>(entity))
 	{
