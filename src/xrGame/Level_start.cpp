@@ -232,6 +232,9 @@ bool CLevel::net_start4()
 
 bool CLevel::net_start5()
 {
+
+    Msg("net_start5 %s", net_start_result_total ? "true" : "false");
+
 	if (net_start_result_total)
 	{
 		NET_Packet NP;
@@ -244,11 +247,16 @@ bool CLevel::net_start5()
 			Server->SLS_Clear();
 		};
 	};
+
+    Msg("net_start5 end");
+
 	return true;
 }
 
 bool CLevel::net_start6()
 {
+    Msg("net_start6 start");
+
 	//init bullet manager
 	BulletManager().Clear();
 	BulletManager().Load();
@@ -333,6 +341,8 @@ bool CLevel::net_start6()
 		if (CurrentGameUI())
 			CurrentGameUI()->OnConnected();
 	}
+
+    Msg("net_start6 end");
 
 	return true;
 }

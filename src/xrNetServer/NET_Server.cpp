@@ -331,7 +331,7 @@ IPureServer::EConnect IPureServer::Connect(LPCSTR options, GameDescriptionData& 
 			strncpy_s(tmpStr, sMaxPlayers, 63);
 		dwMaxPlayers = atol(tmpStr);
 	}
-	const bool force_coop_from_cmdline = !!strstr(Core.Params, "-coop_force_single_listen");
+    const bool force_coop_from_cmdline = true; // !!strstr(Core.Params, "-coop_force_single_listen");
 	if (single_mode && !has_maxplayers_option && force_coop_from_cmdline)
 	{
 		// Optional compatibility mode for legacy scripts:

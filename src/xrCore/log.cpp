@@ -144,6 +144,8 @@ void AddOne(const char* split)
 	if (LogExecCB && LogCB)LogCB(split);
 
 	logCS.Leave();
+
+    FlushLog();
 }
 
 void Log(const char* s)
@@ -278,10 +280,21 @@ void InitLog()
 	LogFile.reserve(10000);
 }
 
+#include "DateTime.hpp"
 void CreateLog(BOOL nl)
 {
-	no_log = nl;
-	strconcat(sizeof(log_file_name), log_file_name, Core.ApplicationName, "_", Core.UserName, ".log");
+    no_log = nl;
+
+    string256 CurrentDate;
+    string256 CurrentTime;
+
+    Time time;
+    xr_strconcat(CurrentDate, time.GetYearString().c_str(), ".", time.GetMonthString().c_str(), ".", time.GetDayString().c_str());
+    xr_strconcat(CurrentTime, time.GetHoursString().c_str(), ".", time.GetMinutesString().c_str(), ".", time.GetSecondsString().c_str());
+
+    xr_strconcat(log_file_name, Core.ApplicationName, "-", CurrentDate, "-", CurrentTime, "-", Core.UserName, ".log");
+
+    //strconcat(sizeof(log_file_name), log_file_name, Core.ApplicationName, "_", Core.UserName, ".log");
 	if (FS.path_exist("$logs$"))
 		FS.update_path(logFName, "$logs$", log_file_name);
 	if (!no_log)

@@ -106,9 +106,9 @@ bool CLevel::synchronize_client()
 #ifdef DEBUG
 	Msg("--- Waiting for server configuration...");
 #endif // #ifdef DEBUG
+    ClientReceive();
 	if (Server)
 	{
-		ClientReceive();
 		Server->Update();
 	} // if OnClient ClientReceive method called in upper invokation
 	//Sleep(5); 

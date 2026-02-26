@@ -288,6 +288,7 @@
     <ClCompile Include="mezz_stringbuffer.cpp">
       <Filter>shared memory/string library</Filter>
     </ClCompile>
+    <ClCompile Include="DateTime.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="FTimer.h">
@@ -610,6 +611,7 @@
     <ClInclude Include="_thread_types.h">
       <Filter>Kernel</Filter>
     </ClInclude>
+    <ClInclude Include="DateTime.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="xrCore.rc" />

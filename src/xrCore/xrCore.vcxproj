@@ -466,6 +466,7 @@
     <ClCompile Include="clsid.cpp" />
     <ClCompile Include="cpuid.cpp" />
     <ClCompile Include="crc32.cpp" />
+    <ClCompile Include="DateTime.cpp" />
     <ClCompile Include="dump_string.cpp" />
     <ClCompile Include="FileSystem.cpp" />
     <ClCompile Include="FileSystem_borland.cpp" />
@@ -579,6 +580,7 @@
     <ClInclude Include="compression_ppmd_stream.h" />
     <ClInclude Include="compression_ppmd_stream_inline.h" />
     <ClInclude Include="cpuid.h" />
+    <ClInclude Include="DateTime.hpp" />
     <ClInclude Include="dump_string.h" />
     <CustomBuild Include="FileSystem.h" />
     <ClInclude Include="file_stream_reader.h" />

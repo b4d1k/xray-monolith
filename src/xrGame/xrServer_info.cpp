@@ -39,7 +39,7 @@ server_info_uploader& xrServer::GetServerInfoUploader()
 
 void xrServer::SendServerInfoToClient(ClientID const& new_client) //WARNING ! this function is thread unsafe !!!
 {
-	if (IsGameTypeSingle())
+    if (IsGameTypeSingle() || (GameID() == eGameIDSingle))
 	{
 		SendConfigFinished(new_client);
 		return;

@@ -27,6 +27,7 @@ bool CLevel::net_Start_client(const char* options)
 
 bool CLevel::net_start_client1()
 {
+    Msg("net_start_client1 start");
 	pApp->LoadBegin();
 	// name_of_server
 	string64 name_of_server = "";
@@ -45,6 +46,8 @@ bool CLevel::net_start_client1()
 		g_pGamePersistent->LoadTitle				(temp);
 	*/
 	g_pGamePersistent->LoadTitle();
+
+    Msg("net_start_client1 end");
 	return true;
 }
 
@@ -52,6 +55,7 @@ bool CLevel::net_start_client1()
 
 bool CLevel::net_start_client2()
 {
+    Msg("net_start_client2 start");
 	if (psNET_direct_connect)
 	{
 		Server->create_direct_client();
@@ -69,6 +73,7 @@ bool CLevel::net_start_client2()
 	m_profile_data_sent = false;
 	connected_to_server = Connect2Server(*m_caClientOptions);
 
+    Msg("net_start_client2 end");
 	return true;
 }
 
@@ -82,6 +87,7 @@ void rescan_mp_archives()
 
 bool CLevel::net_start_client3()
 {
+    Msg("net_start_client3 start");
 	if (connected_to_server)
 	{
 		LPCSTR level_name = NULL;
@@ -135,11 +141,14 @@ bool CLevel::net_start_client3()
 		if (!IsGameTypeSingle())
 			CalculateLevelCrc32();
 	}
+
+    Msg("net_start_client3 end");
 	return true;
 }
 
 bool CLevel::net_start_client4()
 {
+    Msg("net_start_client4 start");
 	if (connected_to_server)
 	{
 		// Begin spawn
@@ -201,6 +210,8 @@ bool CLevel::net_start_client4()
 					}
 		*/
 	}
+
+    Msg("net_start_client4 end");
 	return true;
 }
 
@@ -222,6 +233,7 @@ void CLevel::ClientSendProfileData()
 
 bool CLevel::net_start_client5()
 {
+    Msg("net_start_client5 start");
 	if (connected_to_server)
 	{
 		// HUD
@@ -240,11 +252,18 @@ bool CLevel::net_start_client5()
 		sended_request_connection_data = FALSE;
 		deny_m_spawn = TRUE;
 	}
+    Msg("net_start_client5 end");
 	return true;
 }
 
 bool CLevel::net_start_client6()
 {
+    Msg("net_start_client6 start");
+
+    static u32 call = 0;
+    Msg("## client6 enter call=%u connected=%d game_configured=%d map_sync=%d",
+        ++call, connected_to_server, game_configured, (int)map_data.m_map_sync_received);
+
 	if (connected_to_server)
 	{
 		// Sync
@@ -256,11 +275,15 @@ bool CLevel::net_start_client6()
 			// For single/co-op startup, bypass MP map-sync branch and perform direct client sync.
 			deny_m_spawn = FALSE;
 			map_data.m_map_sync_received = true;
-			if (!synchronize_client())
-				return false;
+            if (!synchronize_client())
+            {
+                Msg("!! client6 fail: sync_client/map_data returned false");
+                return false;
+            }
 		}
 		else if (!synchronize_map_data())
 		{
+            Msg("!! client6 fail: sync_client/map_data returned false");
 			return false;
 		}
 
@@ -301,6 +324,9 @@ bool CLevel::net_start_client6()
 		net_start_result_total = FALSE;
 	}
 
+    Msg("## client6 after sync ok, game_configured=%d", game_configured);
+
 	pApp->LoadEnd();
+    Msg("net_start_client6 end");
 	return true;
 }
