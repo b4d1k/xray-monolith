@@ -44,6 +44,7 @@ private:
 	CPatrolPathStorage* m_patrol_path_storage;
 	moving_objects* m_moving_objects;
 	doors::manager* m_doors_manager;
+	bool m_game_graph_owner;
 
 private:
 	void load(LPCSTR level_name);
