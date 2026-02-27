@@ -85,6 +85,8 @@ CALifeSimulator::CALifeSimulator(xrServer* server) :
 	restart_all();
 	ai().set_alife(this);
 	reload(alife_section);
+	if (ai().get_game_graph())
+		graph().on_load();
 }
 
 CALifeSimulator::~CALifeSimulator()

@@ -71,7 +71,7 @@ bool CLevel::net_start_client2()
 
 	m_host_object_id_map.clear();
 	m_host_object_id_map_sync_received = false;
-	reset_local_alife_replica();
+	m_host_actor_server_id = u16(0xffff);
 	m_profile_data_sent = false;
 	connected_to_server = Connect2Server(*m_caClientOptions);
 

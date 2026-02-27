@@ -409,6 +409,12 @@ void CLevel::ClientReceive()
 
 					Msg("* received host object id map chunk: start=%u count=%u total=%u", chunk_start, chunk_count, total);
 				}
+				else if (sync_type == COOP_SYNC_ACTOR_ID_INFO)
+				{
+					m_host_actor_server_id = P->r_u16();
+					u16 client_actor_id = P->r_u16();
+					Msg("* host actor id synchronized: host=%u client_alias=%u", m_host_actor_server_id, client_actor_id);
+				}
 			}
 			break;
 

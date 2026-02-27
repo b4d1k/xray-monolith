@@ -190,17 +190,7 @@ protected:
 	LevelMapSyncData map_data;
 	xr_map<u16, u16> m_host_object_id_map;
 	bool m_host_object_id_map_sync_received = false;
-	struct SLocalAlifeReplicaObject
-	{
-		shared_str section;
-		u16 parent_id = u16(-1);
-	};
-	xr_map<u16, SLocalAlifeReplicaObject> m_local_alife_replica_objects;
-	bool m_local_alife_replica_initialized = false;
-	void reset_local_alife_replica();
-	void bootstrap_local_alife_replica();
-	void on_local_alife_replica_spawn(NET_Packet& P);
-	void on_local_alife_replica_event(NET_Packet& P, bool packet_header_consumed);
+	u16 m_host_actor_server_id = u16(0xffff);
 	bool synchronize_map_data();
 	bool synchronize_client();
 	bool xr_stdcall net_start1();
