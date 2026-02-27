@@ -83,9 +83,19 @@ CALifeSimulator::CALifeSimulator(xrServer* server) :
 	CALifeInteractionManager(server, alife_section),
 	CALifeSimulatorBase(server, alife_section)
 {
-	restart_all();
+	// Client-side snapshot ALife bootstrap must not reset script/menu globals.
+	// restart_all() is valid for full single-player ALife startup only.
 	ai().set_alife(this);
 	reload(alife_section);
+
+	if (pSettings->line_exist(alife_section, "start_game_callback"))
+	{
+		LPCSTR start_game_callback = pSettings->r_string(alife_section, "start_game_callback");
+		::luabind::functor<void> functor;
+		if (ai().script_engine().functor(start_game_callback, functor))
+			functor();
+	}
+
 	if (ai().get_game_graph())
 		graph().on_load();
 }

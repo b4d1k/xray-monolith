@@ -191,6 +191,7 @@ protected:
 	xr_map<u16, u16> m_host_object_id_map;
 	bool m_host_object_id_map_sync_received = false;
 	u16 m_host_actor_server_id = u16(0xffff);
+	xr_map<u16, CSE_Abstract*> m_client_spawn_se_cache;
 	struct SLocalAlifeReplicaObject
 	{
 		shared_str section;
@@ -288,6 +289,7 @@ public:
 	//-AVO
 	void ProcessGameEvents();
 	void ProcessGameSpawns();
+	CSE_Abstract* client_spawn_se_by_id(u16 id) const;
 	void ProcessCompressedUpdate(NET_Packet& P, u8 const compression_type);
 	// Input
 	virtual void IR_OnKeyboardPress(int btn);
