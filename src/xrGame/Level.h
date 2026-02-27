@@ -17,6 +17,7 @@
 
 class CHUDManager;
 class CParticlesObject;
+class CALifeSimulator;
 class xrServer;
 class game_cl_GameState;
 class NET_Queue_Event;
@@ -167,6 +168,7 @@ public:
 	NET_Queue_Event* game_events = nullptr;
 	xr_deque<CSE_Abstract*> game_spawn_queue;
 	xrServer* Server = nullptr;
+	CALifeSimulator* m_client_alife_simulator = nullptr;
 	GlobalFeelTouch m_feel_deny;
 	CZoneList* hud_zones_list = nullptr;
 	CZoneList* create_hud_zones_list();
@@ -188,6 +190,8 @@ protected:
 	LevelMapSyncData map_data;
 	xr_map<u16, u16> m_host_object_id_map;
 	bool m_host_object_id_map_sync_received = false;
+	u16 m_host_actor_server_id = u16(0xffff);
+	xr_map<u16, CSE_Abstract*> m_client_spawn_se_cache;
 	bool synchronize_map_data();
 	bool synchronize_client();
 	bool xr_stdcall net_start1();
@@ -274,6 +278,7 @@ public:
 	//-AVO
 	void ProcessGameEvents();
 	void ProcessGameSpawns();
+	CSE_Abstract* client_spawn_se_by_id(u16 id) const;
 	void ProcessCompressedUpdate(NET_Packet& P, u8 const compression_type);
 	// Input
 	virtual void IR_OnKeyboardPress(int btn);

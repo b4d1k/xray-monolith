@@ -30,14 +30,12 @@ public:
 
 	IC bool operator()(::description* const & ptr) const
 	{
-		return (m_id._get() == ptr->table_id()._get());
+		return !xr_strcmp(m_id.c_str(), ptr->table_id().c_str());
 	}
 };
 
 DescriptionPtr storage::description(shared_str const& table_id)
 {
-	collect_garbage();
-
 	Descriptions::iterator found =
 		std::find_if(
 			m_descriptions.begin(),
@@ -66,28 +64,9 @@ storage::~storage()
 
 void storage::collect_garbage()
 {
-	struct garbage
-	{
-		static IC bool predicate(::description* const & object)
-		{
-			if (object->intrusive_ref_count())
-				return (false);
-
-			if (Device.dwTimeGlobal < object->m_last_time_dec + time_to_delete)
-				return (false);
-
-			::description* temp = object;
-			xr_delete(temp);
-			return (true);
-		}
-	};
-
-	m_descriptions.erase(
-		std::remove_if(
-			m_descriptions.begin(),
-			m_descriptions.end(),
-			&garbage::predicate
-		),
-		m_descriptions.end()
-	);
+	// NOTE:
+	// Runtime cleanup is intentionally disabled for stability during client bootstrap/spawn.
+	// Descriptions are released in storage dtor via delete_data(m_descriptions).
+	// Previous eager GC path could invalidate entries while smart-cover net spawn is in progress.
+	XR_UNUSED(time_to_delete);
 }
