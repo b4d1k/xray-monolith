@@ -106,7 +106,6 @@ enum
 enum ECoopSyncPayload : u8
 {
 	COOP_SYNC_OBJECT_ID_MAP = 1,
-	COOP_SYNC_ACTOR_ID_INFO = 2,
 };
 
 enum ECoopSyncRequest : u8
