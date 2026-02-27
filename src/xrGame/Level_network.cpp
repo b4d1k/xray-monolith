@@ -150,6 +150,7 @@ void CLevel::net_Stop()
 		SaveDemoInfo();
 
 	remove_objects();
+	reset_local_alife_replica();
 
 	//WARNING ! remove_objects() uses this flag, so position of this line must e here ..
 	game_configured = FALSE;
