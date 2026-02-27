@@ -55,7 +55,10 @@ void CLevel::cl_Process_Spawn(NET_Packet& P)
 	if (g_bDebugEvents)		ProcessGameSpawns();
 	/*/
 	if (OnClient())
+	{
 		m_client_spawn_se_cache[E->ID] = E;
+		ai().moving_objects().ensure_tree_initialized();
+	}
 
 	g_sv_Spawn(E);
 

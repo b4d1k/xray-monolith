@@ -150,6 +150,9 @@ void moving_objects::fill_nearest_list(const Fvector& position, const float& rad
 void moving_objects::query_action_static(moving_object* object, const Fvector& _start_position,
                                          const Fvector& dest_position)
 {
+	if (!ai().get_level_graph())
+		return;
+
 	Fvector start_position = _start_position;
 	start_position.average(dest_position);
 
