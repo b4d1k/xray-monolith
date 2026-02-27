@@ -34,6 +34,9 @@ SPAWN_STORY_PAIRS spawn_story_ids;
 
 CALifeSimulator* alife()
 {
+	if (Level().IsClient() && !Level().IsServer())
+		return nullptr;
+
 	return (const_cast<CALifeSimulator*>(ai().get_alife()));
 }
 

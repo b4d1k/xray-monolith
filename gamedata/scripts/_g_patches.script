@@ -36,7 +36,7 @@ _G.convert_class_name = function(obj)
 	end
 end
 
--- èñïîëüçóåòñÿ äëÿ âûÿâëåíèÿ ñèãíàòóð ôóíêöèé êîòîðûå çàëîæåíû â xr_conditions
+-- Ã¨Ã±Ã¯Ã®Ã«Ã¼Ã§Ã³Ã¥Ã²Ã±Ã¿ Ã¤Ã«Ã¿ Ã¢Ã»Ã¿Ã¢Ã«Ã¥Ã­Ã¨Ã¿ Ã±Ã¨Ã£Ã­Ã Ã²Ã³Ã° Ã´Ã³Ã­ÃªÃ¶Ã¨Ã© ÃªÃ®Ã²Ã®Ã°Ã»Ã¥ Ã§Ã Ã«Ã®Ã¦Ã¥Ã­Ã» Ã¢ xr_conditions
 _G.printf_xrscript = function(fmt, ...)
 	log(debug.traceback(1))
 	printf(fmt, ...)
@@ -710,4 +710,342 @@ _G.log = function(str)
 	if DebuggerMode then
         LuaPanda.printToVSCode(str,1,2)
     end
+end
+-- Coop: client-safe read-only ALife proxy
+do
+	local engine_alife = _G.alife
+	local warned = {}
+
+	local function warn_once(key, fmt, ...)
+		if warned[key] then
+			return
+		end
+		warned[key] = true
+		printf("! WARNING [coop/alife]: " .. fmt, ...)
+	end
+
+	local readonly_alife = {}
+
+	function readonly_alife:valid_object_id(object_id)
+		return object_id ~= nil and object_id ~= 0xffff
+	end
+
+	function readonly_alife:object(object_id, no_assert)
+		warn_once("object", "alife():object(%s) called on client without local ALife, returning nil", tostring(object_id))
+		return nil
+	end
+
+	function readonly_alife:story_object(story_id)
+		warn_once("story_object", "alife():story_object(%s) called on client without local ALife, returning nil", tostring(story_id))
+		return nil
+	end
+
+	function readonly_alife:actor()
+		return nil
+	end
+
+	function readonly_alife:level_id()
+		return -1
+	end
+
+	function readonly_alife:level_name()
+		return "client"
+	end
+
+	function readonly_alife:switch_distance()
+		return 0
+	end
+
+	function readonly_alife:object_ids()
+		return {}
+	end
+
+	function readonly_alife:objects()
+		return {}
+	end
+
+	function readonly_alife:max_id()
+		return 0
+	end
+
+	setmetatable(readonly_alife, {
+		__index = function(_, k)
+			return function()
+				warn_once(k, "alife():%s() is read-only/no-op on client", tostring(k))
+				return nil
+			end
+		end
+	})
+
+	_G.alife = function()
+		local sim = engine_alife and engine_alife()
+		if sim then
+			return sim
+		end
+		return readonly_alife
+	end
+end
+
+-- Coop: ALife snapshot mirror on clients (read-only)
+do
+	local prev_alife = _G.alife
+
+	local function safe_state()
+		if not (alife_storage_manager and alife_storage_manager.get_state) then
+			return nil
+		end
+		local ok, st = pcall(alife_storage_manager.get_state)
+		if ok then
+			return st
+		end
+		return nil
+	end
+
+	local function make_snapshot_object(id)
+		local st = safe_state()
+		local se_tbl = st and st.se_object and st.se_object[id]
+		if not se_tbl then
+			return nil
+		end
+
+		local o = {}
+		o.id = id
+		o.parent_id = se_tbl.parent_id or 65535
+		o.group_id = se_tbl.group_id or 65535
+		o.m_level_vertex_id = se_tbl.m_level_vertex_id or 0
+		o.m_game_vertex_id = se_tbl.m_game_vertex_id or 0
+		o.position = se_tbl.position
+
+		function o:name()
+			return se_tbl.name
+		end
+		function o:section_name()
+			return se_tbl.section or se_tbl.section_name
+		end
+		function o:story_id()
+			return se_tbl.story_id
+		end
+		return o
+	end
+
+	local function make_ids_from_state()
+		local st = safe_state()
+		local src = st and st.se_object
+		if not src then
+			return {}
+		end
+		local t = {}
+		for id,_ in pairs(src) do
+			t[#t + 1] = id
+		end
+		table.sort(t)
+		return t
+	end
+
+	_G.alife = function()
+		local sim = prev_alife and prev_alife()
+		if sim then
+			return sim
+		end
+
+		local proxy = {}
+		function proxy:valid_object_id(object_id)
+			return object_id ~= nil and object_id ~= 0xffff
+		end
+		function proxy:object(object_id, no_assert)
+			return make_snapshot_object(object_id)
+		end
+		function proxy:story_object(story_id)
+			local ids = make_ids_from_state()
+			for _, id in ipairs(ids) do
+				local obj = make_snapshot_object(id)
+				if obj and obj:story_id() == story_id then
+					return obj
+				end
+			end
+			return nil
+		end
+		function proxy:object_ids()
+			return make_ids_from_state()
+		end
+		function proxy:objects()
+			local res = {}
+			for _, id in ipairs(make_ids_from_state()) do
+				local o = make_snapshot_object(id)
+				if o then
+					res[#res + 1] = o
+				end
+			end
+			return res
+		end
+		function proxy:max_id()
+			local max = 0
+			for _, id in ipairs(make_ids_from_state()) do
+				if id > max then
+					max = id
+				end
+			end
+			return max
+		end
+		function proxy:actor()
+			return nil
+		end
+		setmetatable(proxy, {
+			__index = function(_, k)
+				return function()
+					return nil
+				end
+			end
+		})
+		return proxy
+	end
+end
+
+-- Coop: final ALife compatibility layer (server snapshot-backed, read-only on pure clients)
+do
+	local prev_alife = _G.alife
+	local warned = {}
+
+	local function warn_once(key, fmt, ...)
+		if warned[key] then
+			return
+		end
+		warned[key] = true
+		printf("! WARNING [coop/alife-final]: " .. fmt, ...)
+	end
+
+	local function is_pure_client()
+		return IIsClient and IIsClient() or false
+	end
+
+	local function get_state()
+		if not (alife_storage_manager and alife_storage_manager.get_state) then
+			return nil
+		end
+		local ok, st = pcall(alife_storage_manager.get_state)
+		if ok then
+			return st
+		end
+		return nil
+	end
+
+	local function build_snapshot_object(id)
+		local st = get_state()
+		local se = st and st.se_object and st.se_object[id]
+		if not se then
+			return nil
+		end
+
+		local o = {
+			id = id,
+			parent_id = se.parent_id or 65535,
+			group_id = se.group_id or 65535,
+			m_level_vertex_id = se.m_level_vertex_id or 0,
+			m_game_vertex_id = se.m_game_vertex_id or 0,
+			position = se.position,
+		}
+
+		function o:name()
+			return se.name
+		end
+
+		function o:section_name()
+			return se.section_name or se.section
+		end
+
+		function o:story_id()
+			return se.story_id
+		end
+
+		function o:ID()
+			return id
+		end
+
+		return o
+	end
+
+	local function snapshot_ids()
+		local st = get_state()
+		local se = st and st.se_object
+		if not se then
+			return {}
+		end
+		local t = {}
+		for id,_ in pairs(se) do
+			t[#t + 1] = id
+		end
+		table.sort(t)
+		return t
+	end
+
+	local client_alife = {}
+	function client_alife:valid_object_id(object_id)
+		return object_id ~= nil and object_id ~= 0xffff
+	end
+	function client_alife:object(object_id, no_assert)
+		return build_snapshot_object(object_id)
+	end
+	function client_alife:story_object(story_id)
+		for _, id in ipairs(snapshot_ids()) do
+			local o = build_snapshot_object(id)
+			if o and o:story_id() == story_id then
+				return o
+			end
+		end
+		return nil
+	end
+	function client_alife:object_ids()
+		return snapshot_ids()
+	end
+	function client_alife:objects()
+		local res = {}
+		for _, id in ipairs(snapshot_ids()) do
+			local o = build_snapshot_object(id)
+			if o then
+				res[#res + 1] = o
+			end
+		end
+		return res
+	end
+	function client_alife:max_id()
+		local m = 0
+		for _, id in ipairs(snapshot_ids()) do
+			if id > m then m = id end
+		end
+		return m
+	end
+	function client_alife:actor()
+		return nil
+	end
+
+	setmetatable(client_alife, {
+		__index = function(_, k)
+			return function()
+				warn_once(k, "alife():%s() is unavailable in read-only client snapshot mode", tostring(k))
+				return nil
+			end
+		end
+	})
+
+	_G.alife = function()
+		local sim = prev_alife and prev_alife()
+		if sim then
+			return sim
+		end
+		if is_pure_client() then
+			return client_alife
+		end
+		return client_alife
+	end
+
+	-- Keep common helper functions working with minimal script rewrites
+	_G.alife_object = function(id, no_assert)
+		local sim = _G.alife()
+		return sim and sim:object(id, no_assert)
+	end
+
+	_G.alife_story_object = function(story_id)
+		local sim = _G.alife()
+		return sim and sim:story_object(story_id)
+	end
 end
