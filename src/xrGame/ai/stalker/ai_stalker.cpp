@@ -61,6 +61,7 @@
 #include "smart_cover_animation_planner.h"
 #include "smart_cover_planner_target_selector.h"
 #include "../../../xrEngine/CameraBase.h"
+#include "../../Level.h"
 
 #ifdef DEBUG
 #	include "../../alife_simulator.h"
@@ -700,6 +701,8 @@ BOOL CAI_Stalker::net_Spawn(CSE_Abstract* DC)
 	                                                                                               .m_body.target.yaw =
 		angle_normalize_signed(-tpHuman->o_torso.yaw);
 	movement().m_body.current.pitch = movement().m_body.target.pitch = 0;
+
+	ai().ensure_level_graph(*Level().name());
 
 	if (ai().get_game_graph())
 	{

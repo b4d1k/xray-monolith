@@ -39,6 +39,7 @@ CAI_Space::CAI_Space()
 	m_script_engine = 0;
 	m_moving_objects = 0;
 	m_doors_manager = 0;
+	m_game_graph_owner = false;
 }
 
 void CAI_Space::init()
@@ -68,6 +69,8 @@ void CAI_Space::init()
 	m_script_engine = xr_new<CScriptEngine>();
 	script_engine().init();
 
+	ensure_game_graph();
+
 #ifndef NO_SINGLE
 	extern string4096 g_ca_stdout;
 	setvbuf(stderr, g_ca_stdout,_IOFBF, sizeof(g_ca_stdout));
@@ -92,6 +95,10 @@ CAI_Space::~CAI_Space()
 	xr_delete(m_cover_manager);
 	xr_delete(m_graph_engine);
 	xr_delete(m_ef_storage);
+
+	if (m_game_graph_owner)
+		xr_delete(m_game_graph);
+	m_game_graph_owner = false;
 	VERIFY(!m_game_graph);
 }
 
@@ -214,6 +221,11 @@ void CAI_Space::patrol_path_storage(IReader& stream)
 void CAI_Space::set_alife(CALifeSimulator* alife_simulator)
 {
 	VERIFY((!m_alife_simulator && alife_simulator) || (m_alife_simulator && !alife_simulator));
+	if (alife_simulator && m_game_graph_owner)
+	{
+		xr_delete(m_game_graph);
+		m_game_graph_owner = false;
+	}
 	m_alife_simulator = alife_simulator;
 
 	VERIFY(!alife_simulator || !m_game_graph);
@@ -231,6 +243,7 @@ void CAI_Space::game_graph(CGameGraph* game_graph)
 	VERIFY(game_graph);
 	VERIFY(!m_game_graph);
 	m_game_graph = game_graph;
+	m_game_graph_owner = false;
 
 	//	VERIFY					(!m_graph_engine);
 	xr_delete(m_graph_engine);
@@ -244,5 +257,50 @@ const CGameLevelCrossTable& CAI_Space::cross_table() const
 
 const CGameLevelCrossTable* CAI_Space::get_cross_table() const
 {
-	return (&game_graph().cross_table());
+	if (!m_game_graph)
+		return (0);
+
+	return (&m_game_graph->cross_table());
+}
+
+bool CAI_Space::ensure_game_graph()
+{
+	if (g_dedicated_server || m_game_graph || m_alife_simulator)
+		return !!m_game_graph;
+
+	string_path game_graph_file_name;
+	FS.update_path(game_graph_file_name, "$game_data$", "game.graph");
+	if (!FS.exist(game_graph_file_name))
+		return false;
+
+	IReader* stream = FS.r_open(game_graph_file_name);
+	if (!stream)
+		return false;
+
+	m_game_graph = xr_new<CGameGraph>(*stream);
+	m_game_graph_owner = true;
+	FS.r_close(stream);
+
+	return true;
+}
+
+bool CAI_Space::ensure_level_graph(LPCSTR level_name)
+{
+	if (g_dedicated_server)
+		return false;
+
+	ensure_game_graph();
+
+	if (get_level_graph() && get_cross_table() && (level_graph().level_id() != u32(-1)))
+		return true;
+
+	if (m_alife_simulator || !m_game_graph || !level_name || !level_name[0])
+		return false;
+
+	if (!m_game_graph->header().level(level_name, true))
+		return false;
+
+	load(level_name);
+
+	return (get_level_graph() && get_cross_table() && (level_graph().level_id() != u32(-1)));
 }
