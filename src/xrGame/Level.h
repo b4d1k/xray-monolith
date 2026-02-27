@@ -190,6 +190,7 @@ protected:
 	LevelMapSyncData map_data;
 	xr_map<u16, u16> m_host_object_id_map;
 	bool m_host_object_id_map_sync_received = false;
+	u16 m_host_actor_server_id = u16(0xffff);
 	struct SLocalAlifeReplicaObject
 	{
 		shared_str section;

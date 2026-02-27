@@ -15,6 +15,7 @@
 #include "mainmenu.h"
 #include "object_factory.h"
 #include "alife_object_registry.h"
+#include "alife_graph_registry.h"
 #include "../xrEngine/xr_ioconsole.h"
 
 #ifdef DEBUG
@@ -85,6 +86,8 @@ CALifeSimulator::CALifeSimulator(xrServer* server) :
 	restart_all();
 	ai().set_alife(this);
 	reload(alife_section);
+	if (ai().get_game_graph())
+		graph().on_load();
 }
 
 CALifeSimulator::~CALifeSimulator()

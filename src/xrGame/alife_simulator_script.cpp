@@ -335,6 +335,9 @@ CSE_ALifeCreatureActor* get_actor(const CALifeSimulator* self)
 	if (CSE_ALifeCreatureActor* actor = self->graph().actor())
 		return actor;
 
+	if (CSE_ALifeCreatureActor* actor0 = smart_cast<CSE_ALifeCreatureActor*>(self->objects().object(0, true)))
+		return actor0;
+
 	CActor* game_actor = smart_cast<CActor*>(Level().CurrentEntity());
 	if (!game_actor)
 		game_actor = smart_cast<CActor*>(Level().CurrentControlEntity());
