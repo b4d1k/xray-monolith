@@ -19,6 +19,7 @@
 #include "alife_registry_container.h"
 #include "xrServer.h"
 #include "level.h"
+#include "actor.h"
 
 #include <luabind/iterator_policy.hpp>
 #include <luabind/iterator_pair_policy.hpp>
@@ -45,7 +46,13 @@ CSE_ALifeDynamicObject* alife_object(const CALifeSimulator* self, ALife::_OBJECT
 		Msg("alife():object(id) ! invalid id specified");
 		return (0);
 	}
-	return (self->objects().object(object_id, true));
+	if (CSE_ALifeDynamicObject* object = self->objects().object(object_id, true))
+		return object;
+
+	if (CSE_ALifeDynamicObject* spawning = smart_cast<CSE_ALifeDynamicObject*>(Level().client_spawn_se_by_id(object_id)))
+		return spawning;
+
+	return nullptr;
 }
 
 bool valid_object_id(const CALifeSimulator* self, ALife::_OBJECT_ID object_id)
@@ -72,7 +79,13 @@ CSE_ALifeDynamicObject *alife_object		(const CALifeSimulator *self, LPCSTR name)
 CSE_ALifeDynamicObject* alife_object(const CALifeSimulator* self, ALife::_OBJECT_ID id, bool no_assert)
 {
 	VERIFY(self);
-	return (self->objects().object(id, no_assert));
+	if (CSE_ALifeDynamicObject* object = self->objects().object(id, no_assert))
+		return object;
+
+	if (CSE_ALifeDynamicObject* spawning = smart_cast<CSE_ALifeDynamicObject*>(Level().client_spawn_se_by_id(id)))
+		return spawning;
+
+	return nullptr;
 }
 
 CSE_ALifeDynamicObject* alife_story_object(const CALifeSimulator* self, ALife::_STORY_ID id)
@@ -327,7 +340,42 @@ LPCSTR get_level_name(const CALifeSimulator* self, int level_id)
 CSE_ALifeCreatureActor* get_actor(const CALifeSimulator* self)
 {
 	THROW(self);
-	return (self->graph().actor());
+
+	if (CSE_ALifeCreatureActor* actor = self->graph().actor())
+		return actor;
+
+	if (CSE_ALifeCreatureActor* actor0 = smart_cast<CSE_ALifeCreatureActor*>(self->objects().object(0, true)))
+		return actor0;
+
+	CActor* game_actor = smart_cast<CActor*>(Level().CurrentEntity());
+	if (!game_actor)
+		game_actor = smart_cast<CActor*>(Level().CurrentControlEntity());
+
+	if (!game_actor)
+		return nullptr;
+
+	CSE_ALifeDynamicObject* se_object = self->objects().object(game_actor->ID(), true);
+	if (CSE_ALifeCreatureActor* se_actor = smart_cast<CSE_ALifeCreatureActor*>(se_object))
+		return se_actor;
+
+	for (const auto& it : self->objects().objects())
+	{
+		if (CSE_ALifeCreatureActor* fallback = smart_cast<CSE_ALifeCreatureActor*>(it.second))
+			return fallback;
+	}
+
+	// Final compatibility fallback for early client bootstrap:
+	// provide a synthetic actor server entity with alias id=0 so legacy scripts
+	// that do `alife():actor().id` won't crash before real ALife actor arrives.
+	static CSE_ALifeCreatureActor* s_client_actor_stub = nullptr;
+	if (!s_client_actor_stub)
+	{
+		s_client_actor_stub = xr_new<CSE_ALifeCreatureActor>("mp_actor");
+		s_client_actor_stub->ID = 0;
+		s_client_actor_stub->ID_Parent = 0xffff;
+		s_client_actor_stub->set_name_replace("mp_actor_client_stub");
+	}
+	return s_client_actor_stub;
 }
 
 KNOWN_INFO_VECTOR* registry(const CALifeSimulator* self, const ALife::_OBJECT_ID& id)

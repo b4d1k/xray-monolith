@@ -48,6 +48,7 @@ public:
 
 private:
 	TREE* m_tree;
+	NEAREST_MOVING m_pending_registration;
 	NEAREST_STATIC m_nearest_static;
 
 private:
@@ -109,6 +110,7 @@ public:
 
 public:
 	void on_level_load();
+	void ensure_tree_initialized();
 	void on_object_move(moving_object* moving_object);
 
 public:

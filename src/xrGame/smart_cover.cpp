@@ -52,22 +52,34 @@ cover::cover(
 	m_loopholes.reserve(m_description->loopholes().size());
 	Loopholes::const_iterator I = m_description->loopholes().begin();
 	Loopholes::const_iterator E = m_description->loopholes().end();
-	for (; I != E; ++I)
+	if (loopholes_availability.type() == LUA_TTABLE)
 	{
-		::luabind::object::iterator i = loopholes_availability.begin();
-		::luabind::object::iterator e = loopholes_availability.end();
-		for (; i != e; ++i)
+		for (; I != E; ++I)
 		{
-			LPCSTR const loophole_id = ::luabind::object_cast<LPCSTR>(i.key());
-			if (xr_strcmp(loophole_id, (*I)->id()))
-				continue;
+			bool found = false;
+			bool enabled = true;
+			::luabind::object::iterator i = loopholes_availability.begin();
+			::luabind::object::iterator e = loopholes_availability.end();
+			for (; i != e; ++i)
+			{
+				LPCSTR const loophole_id = ::luabind::object_cast<LPCSTR>(i.key());
+				if (xr_strcmp(loophole_id, (*I)->id()))
+					continue;
 
-			if (!::luabind::object_cast<bool>(*i))
+				found = true;
+				enabled = ::luabind::object_cast<bool>(*i);
 				break;
+			}
 
-			m_loopholes.push_back(*I);
-			break;
+			if (!found || enabled)
+				m_loopholes.push_back(*I);
 		}
+	}
+	else
+	{
+		// Client spawn packets may not carry per-loophole availability table.
+		// Fallback: keep all description loopholes enabled.
+		m_loopholes.assign(m_description->loopholes().begin(), m_description->loopholes().end());
 	}
 
 	CLevelGraph const& graph = ai().level_graph();

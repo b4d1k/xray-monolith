@@ -10,6 +10,15 @@
 #include "../xrEngine/xr_object.h"
 #include "../xrEngine/IGame_Persistent.h"
 
+
+CSE_Abstract* CLevel::client_spawn_se_by_id(u16 id) const
+{
+	xr_map<u16, CSE_Abstract*>::const_iterator it = m_client_spawn_se_cache.find(id);
+	if (it == m_client_spawn_se_cache.end())
+		return nullptr;
+	return it->second;
+}
+
 void CLevel::cl_Process_Spawn(NET_Packet& P)
 {
 	// Begin analysis
@@ -45,7 +54,16 @@ void CLevel::cl_Process_Spawn(NET_Packet& P)
 	game_spawn_queue.push_back(E);
 	if (g_bDebugEvents)		ProcessGameSpawns();
 	/*/
+	if (OnClient())
+	{
+		m_client_spawn_se_cache[E->ID] = E;
+		ai().moving_objects().ensure_tree_initialized();
+	}
+
 	g_sv_Spawn(E);
+
+	if (OnClient())
+		m_client_spawn_se_cache.erase(E->ID);
 
 	F_entity_Destroy(E);
 	//*/

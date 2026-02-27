@@ -701,23 +701,27 @@ BOOL CAI_Stalker::net_Spawn(CSE_Abstract* DC)
 		angle_normalize_signed(-tpHuman->o_torso.yaw);
 	movement().m_body.current.pitch = movement().m_body.target.pitch = 0;
 
-	if (ai().game_graph().valid_vertex_id(tpHuman->m_tGraphID))
-		ai_location().game_vertex(tpHuman->m_tGraphID);
+	if (ai().get_game_graph())
+	{
+		if (ai().game_graph().valid_vertex_id(tpHuman->m_tGraphID))
+			ai_location().game_vertex(tpHuman->m_tGraphID);
 
-	if (ai().game_graph().valid_vertex_id(tpHuman->m_tNextGraphID) && movement().restrictions().accessible(
-		ai().game_graph().vertex(
-			     tpHuman->m_tNextGraphID)->
-		     level_point()))
-		movement().set_game_dest_vertex(tpHuman->m_tNextGraphID);
+		if (ai().game_graph().valid_vertex_id(tpHuman->m_tNextGraphID) && movement().restrictions().accessible(
+			ai().game_graph().vertex(
+				     tpHuman->m_tNextGraphID)->
+			     level_point()))
+			movement().set_game_dest_vertex(tpHuman->m_tNextGraphID);
+	}
+	else if (ai().get_cross_table() && ai().get_level_graph() && ai().level_graph().valid_vertex_id(ai_location().level_vertex_id()))
+	{
+		ai_location().game_vertex(ai().cross_table().vertex(ai_location().level_vertex_id()).game_vertex_id());
+	}
 
 	R_ASSERT2(
-		ai().get_game_graph() &&
 		ai().get_level_graph() &&
-		ai().get_cross_table() &&
 		(ai().level_graph().level_id() != u32(-1)),
-		"There is no AI-Map, level graph, cross table, or graph is not compiled into the game graph!"
+		"There is no AI-Map or level graph is not initialized!"
 	);
-
 	setEnabled(TRUE);
 
 

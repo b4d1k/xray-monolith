@@ -134,6 +134,9 @@ struct already_wait_predicate
 
 void moving_objects::fill_nearest_moving(moving_object* object)
 {
+	if (!m_tree)
+		return;
+
 	Fvector next_position = object->predict_position(time_to_check);
 	float linear_velocity = next_position.distance_to(object->position()) / time_to_check;
 	float radius = (max_linear_velocity + linear_velocity) * time_to_check;
@@ -570,6 +573,9 @@ void moving_objects::query_action_dynamic(moving_object* object)
 		return;
 
 	if (object->action_frame() == Device.dwFrame)
+		return;
+
+	if (!m_tree)
 		return;
 
 	m_visited_emitters.clear_not_free	();

@@ -91,6 +91,7 @@ void xrServer::SendLevelObjectsIdMap(IClient* _CL)
 
 	const u16 total = (u16)ids.size();
 	const u16 chunk_size = 256;
+	const u16 owner_id = (CL->owner ? CL->owner->ID : u16(0xffff));
 
 	for (u16 chunk_start = 0; chunk_start < total; chunk_start = u16(chunk_start + chunk_size))
 	{
@@ -103,16 +104,36 @@ void xrServer::SendLevelObjectsIdMap(IClient* _CL)
 		P.w_u16(chunk_start);
 		P.w_u16(chunk_count);
 
+
 		for (u16 i = 0; i < chunk_count; ++i)
 		{
 			CSE_Abstract* E = ID_to_entity(ids[chunk_start + i]);
 			VERIFY(E);
-			P.w_u16(E->ID);
-			P.w_u16(E->ID_Parent);
+
+			u16 object_id = E->ID;
+			u16 parent_id = E->ID_Parent;
+
+			if (owner_id != u16(0xffff))
+			{
+				if (object_id == owner_id)
+					object_id = 0;
+				if (parent_id == owner_id)
+					parent_id = 0;
+			}
+
+			P.w_u16(object_id);
+			P.w_u16(parent_id);
 		}
 
 		SendTo(CL->ID, P, net_flags(TRUE, TRUE));
 	}
+
+	NET_Packet actorInfo;
+	actorInfo.w_begin(M_H2C_SYNC_STATE);
+	actorInfo.w_u8(COOP_SYNC_ACTOR_ID_INFO);
+	actorInfo.w_u16(owner_id);
+	actorInfo.w_u16(0); // client-side alias id for local actor
+	SendTo(CL->ID, actorInfo, net_flags(TRUE, TRUE));
 }
 
 
