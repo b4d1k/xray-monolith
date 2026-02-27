@@ -19,6 +19,7 @@
 #include "alife_registry_container.h"
 #include "xrServer.h"
 #include "level.h"
+#include "actor.h"
 
 #include <luabind/iterator_policy.hpp>
 #include <luabind/iterator_pair_policy.hpp>
@@ -330,7 +331,28 @@ LPCSTR get_level_name(const CALifeSimulator* self, int level_id)
 CSE_ALifeCreatureActor* get_actor(const CALifeSimulator* self)
 {
 	THROW(self);
-	return (self->graph().actor());
+
+	if (CSE_ALifeCreatureActor* actor = self->graph().actor())
+		return actor;
+
+	CActor* game_actor = smart_cast<CActor*>(Level().CurrentEntity());
+	if (!game_actor)
+		game_actor = smart_cast<CActor*>(Level().CurrentControlEntity());
+
+	if (!game_actor)
+		return nullptr;
+
+	CSE_ALifeDynamicObject* se_object = self->objects().object(game_actor->ID(), true);
+	if (CSE_ALifeCreatureActor* se_actor = smart_cast<CSE_ALifeCreatureActor*>(se_object))
+		return se_actor;
+
+	for (const auto& it : self->objects().objects())
+	{
+		if (CSE_ALifeCreatureActor* fallback = smart_cast<CSE_ALifeCreatureActor*>(it.second))
+			return fallback;
+	}
+
+	return nullptr;
 }
 
 KNOWN_INFO_VECTOR* registry(const CALifeSimulator* self, const ALife::_OBJECT_ID& id)
