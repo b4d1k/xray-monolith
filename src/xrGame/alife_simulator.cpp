@@ -15,6 +15,7 @@
 #include "mainmenu.h"
 #include "object_factory.h"
 #include "alife_object_registry.h"
+#include "alife_graph_registry.h"
 #include "../xrEngine/xr_ioconsole.h"
 
 #ifdef DEBUG
@@ -75,6 +76,28 @@ CALifeSimulator::CALifeSimulator(xrServer* server, shared_str* command_line) :
 	functor();
 
 	load(p.m_game_or_spawn, !xr_strcmp(p.m_new_or_load, "load") ? false : true, !xr_strcmp(p.m_new_or_load, "new"));
+}
+
+CALifeSimulator::CALifeSimulator(xrServer* server) :
+	CALifeUpdateManager(server, alife_section),
+	CALifeInteractionManager(server, alife_section),
+	CALifeSimulatorBase(server, alife_section)
+{
+	// Client-side snapshot ALife bootstrap must not reset script/menu globals.
+	// restart_all() is valid for full single-player ALife startup only.
+	ai().set_alife(this);
+	reload(alife_section);
+
+	if (pSettings->line_exist(alife_section, "start_game_callback"))
+	{
+		LPCSTR start_game_callback = pSettings->r_string(alife_section, "start_game_callback");
+		::luabind::functor<void> functor;
+		if (ai().script_engine().functor(start_game_callback, functor))
+			functor();
+	}
+
+	if (ai().get_game_graph())
+		graph().on_load();
 }
 
 CALifeSimulator::~CALifeSimulator()
