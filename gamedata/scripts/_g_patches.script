@@ -36,7 +36,7 @@ _G.convert_class_name = function(obj)
 	end
 end
 
--- используется для выявления сигнатур функций которые заложены в xr_conditions
+-- ГЁГ±ГЇГ®Г«ГјГ§ГіГҐГІГ±Гї Г¤Г«Гї ГўГ»ГїГўГ«ГҐГ­ГЁГї Г±ГЁГЈГ­Г ГІГіГ° ГґГіГ­ГЄГ¶ГЁГ© ГЄГ®ГІГ®Г°Г»ГҐ Г§Г Г«Г®Г¦ГҐГ­Г» Гў xr_conditions
 _G.printf_xrscript = function(fmt, ...)
 	log(debug.traceback(1))
 	printf(fmt, ...)

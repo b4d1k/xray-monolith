@@ -10,6 +10,7 @@
 #include "space_restriction_manager.h"
 #include "ai_space.h"
 #include "script_engine.h"
+#include "alife_simulator.h"
 #include "stalker_animation_data_storage.h"
 #include "client_spawn_manager.h"
 #include "seniority_hierarchy_holder.h"
@@ -153,6 +154,13 @@ void CLevel::net_Stop()
 
 	//WARNING ! remove_objects() uses this flag, so position of this line must e here ..
 	game_configured = FALSE;
+
+
+	if (m_client_alife_simulator)
+	{
+		m_client_alife_simulator->destroy();
+		xr_delete(m_client_alife_simulator);
+	}
 
 	IGame_Level::net_Stop();
 	IPureClient::Disconnect();

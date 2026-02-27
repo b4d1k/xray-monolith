@@ -17,6 +17,7 @@
 
 class CHUDManager;
 class CParticlesObject;
+class CALifeSimulator;
 class xrServer;
 class game_cl_GameState;
 class NET_Queue_Event;
@@ -167,6 +168,7 @@ public:
 	NET_Queue_Event* game_events = nullptr;
 	xr_deque<CSE_Abstract*> game_spawn_queue;
 	xrServer* Server = nullptr;
+	CALifeSimulator* m_client_alife_simulator = nullptr;
 	GlobalFeelTouch m_feel_deny;
 	CZoneList* hud_zones_list = nullptr;
 	CZoneList* create_hud_zones_list();

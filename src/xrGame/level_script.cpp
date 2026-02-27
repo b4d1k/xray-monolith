@@ -83,6 +83,17 @@ bool IsImportantSave()
 	return !!psActorFlags.test(AF_IMPORTANT_SAVE);
 }
 
+bool IIsHost()
+{
+	return Level().IsServer();
+}
+
+bool IIsClient()
+{
+	return Level().IsClient() && !Level().IsServer();
+}
+
+
 #ifdef DEBUG
 void check_object(CScriptGameObject *object)
 {
@@ -2597,7 +2608,9 @@ void CLevel::script_register(lua_State* L)
 		def("IsGameTypeSingle", &IsGameTypeSingle),
 		def("IsDynamicMusic", &IsDynamicMusic),
 		def("render_get_dx_level", &render_get_dx_level),
-		def("IsImportantSave", &IsImportantSave)
+		def("IsImportantSave", &IsImportantSave),
+		def("IIsHost", &IIsHost),
+		def("IIsClient", &IIsClient)
 	];
 
 	module(L, "weather")
