@@ -53,6 +53,7 @@ private:
 	void patrol_path_storage(IReader& stream);
 	void set_alife(CALifeSimulator* alife_simulator);
 	void game_graph(CGameGraph* game_graph);
+	bool ensure_game_graph();
 
 public:
 	CAI_Space();
@@ -73,6 +74,7 @@ public:
 	IC CScriptEngine& script_engine() const;
 	IC moving_objects& moving_objects() const;
 	IC doors::manager& doors() const;
+	bool ensure_level_graph(LPCSTR level_name);
 
 #ifdef DEBUG
 			void						validate				(const u32			level_id) const;
