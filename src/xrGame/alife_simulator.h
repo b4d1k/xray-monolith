@@ -25,6 +25,7 @@ protected:
 
 public:
 	CALifeSimulator(xrServer* server, shared_str* command_line);
+	CALifeSimulator(xrServer* server);
 	virtual ~CALifeSimulator();
 	virtual void destroy();
 	IReader const* get_config(shared_str config) const;

@@ -10,6 +10,7 @@
 #include "NET_Queue.h"
 #include "file_transfer.h"
 #include "hudmanager.h"
+#include "alife_simulator.h"
 
 #include "../xrphysics/iphworld.h"
 
@@ -70,6 +71,7 @@ bool CLevel::net_start_client2()
 
 	m_host_object_id_map.clear();
 	m_host_object_id_map_sync_received = false;
+	m_host_actor_server_id = u16(0xffff);
 	m_profile_data_sent = false;
 	connected_to_server = Connect2Server(*m_caClientOptions);
 
@@ -266,6 +268,12 @@ bool CLevel::net_start_client6()
 
 	if (connected_to_server)
 	{
+		if (OnClient() && !OnServer() && !m_client_alife_simulator && !ai().get_alife())
+		{
+			m_client_alife_simulator = xr_new<CALifeSimulator>((xrServer*)nullptr);
+			Msg("* client alife snapshot: empty simulator created");
+		}
+
 		// Sync
 		const bool local_single_host = Server && !!strstr(m_caServerOptions.c_str(), "/single");
 		const bool single_game_client = game && (game->Type() == eGameIDSingle);

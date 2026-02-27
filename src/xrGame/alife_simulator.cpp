@@ -15,6 +15,7 @@
 #include "mainmenu.h"
 #include "object_factory.h"
 #include "alife_object_registry.h"
+#include "alife_graph_registry.h"
 #include "../xrEngine/xr_ioconsole.h"
 
 #ifdef DEBUG
@@ -75,6 +76,18 @@ CALifeSimulator::CALifeSimulator(xrServer* server, shared_str* command_line) :
 	functor();
 
 	load(p.m_game_or_spawn, !xr_strcmp(p.m_new_or_load, "load") ? false : true, !xr_strcmp(p.m_new_or_load, "new"));
+}
+
+CALifeSimulator::CALifeSimulator(xrServer* server) :
+	CALifeUpdateManager(server, alife_section),
+	CALifeInteractionManager(server, alife_section),
+	CALifeSimulatorBase(server, alife_section)
+{
+	restart_all();
+	ai().set_alife(this);
+	reload(alife_section);
+	if (ai().get_game_graph())
+		graph().on_load();
 }
 
 CALifeSimulator::~CALifeSimulator()
