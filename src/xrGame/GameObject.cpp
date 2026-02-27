@@ -424,8 +424,13 @@ BOOL CGameObject::net_Spawn(CSE_Abstract* DC)
 					ai_location().level_vertex(l_tpTemporary->m_tNodeID);
 			}
 
-			if (l_tpALifeObject && ai().game_graph().valid_vertex_id(l_tpALifeObject->m_tGraphID))
-				ai_location().game_vertex(l_tpALifeObject->m_tGraphID);
+			if (l_tpALifeObject)
+			{
+				if (ai().get_game_graph() && ai().game_graph().valid_vertex_id(l_tpALifeObject->m_tGraphID))
+					ai_location().game_vertex(l_tpALifeObject->m_tGraphID);
+				else if (ai().get_cross_table() && ai().level_graph().valid_vertex_id(ai_location().level_vertex_id()))
+					ai_location().game_vertex(ai().cross_table().vertex(ai_location().level_vertex_id()).game_vertex_id());
+			}
 
 			validate_ai_locations(false);
 
@@ -447,7 +452,10 @@ BOOL CGameObject::net_Spawn(CSE_Abstract* DC)
 			if (alife_object && ai().level_graph().valid_vertex_id(alife_object->m_tNodeID))
 			{
 				ai_location().level_vertex(alife_object->m_tNodeID);
-				ai_location().game_vertex(alife_object->m_tGraphID);
+				if (ai().get_game_graph() && ai().game_graph().valid_vertex_id(alife_object->m_tGraphID))
+					ai_location().game_vertex(alife_object->m_tGraphID);
+				else if (ai().get_cross_table())
+					ai_location().game_vertex(ai().cross_table().vertex(ai_location().level_vertex_id()).game_vertex_id());
 			}
 		}
 	}
