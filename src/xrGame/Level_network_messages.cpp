@@ -17,6 +17,85 @@
 #include "message_filter.h"
 #include "../xrphysics/iphworld.h"
 
+void CLevel::reset_local_alife_replica()
+{
+	m_local_alife_replica_objects.clear();
+	m_local_alife_replica_initialized = false;
+}
+
+void CLevel::bootstrap_local_alife_replica()
+{
+	if (!OnClient())
+		return;
+
+	if (m_local_alife_replica_initialized)
+		return;
+
+	if (!m_host_object_id_map_sync_received)
+		return;
+
+	m_local_alife_replica_objects.clear();
+	for (xr_map<u16, u16>::const_iterator it = m_host_object_id_map.begin(); it != m_host_object_id_map.end(); ++it)
+	{
+		SLocalAlifeReplicaObject object;
+		object.section = "";
+		object.parent_id = it->second;
+		m_local_alife_replica_objects[it->first] = object;
+	}
+
+	m_local_alife_replica_initialized = true;
+	Msg("* local ALife replica bootstrapped: objects=%u", m_local_alife_replica_objects.size());
+}
+
+void CLevel::on_local_alife_replica_spawn(NET_Packet& P)
+{
+	if (!OnClient() || !m_local_alife_replica_initialized)
+		return;
+
+	NET_Packet packet_copy = P;
+
+	shared_str section;
+	packet_copy.r_stringZ(section);
+
+	string256 name_replace;
+	packet_copy.r_stringZ(name_replace);
+
+	packet_copy.r_u8(); // game type
+	packet_copy.r_u8(); // rp
+
+	Fvector tmp;
+	packet_copy.r_vec3(tmp); // position
+	packet_copy.r_vec3(tmp); // angle
+
+	packet_copy.r_u16(); // respawn
+	u16 object_id = packet_copy.r_u16();
+	u16 parent_id = packet_copy.r_u16();
+
+	SLocalAlifeReplicaObject& object = m_local_alife_replica_objects[object_id];
+	object.section = section;
+	object.parent_id = parent_id;
+}
+
+void CLevel::on_local_alife_replica_event(NET_Packet& P, bool packet_header_consumed)
+{
+	if (!OnClient() || !m_local_alife_replica_initialized)
+		return;
+
+	NET_Packet packet_copy = P;
+	if (!packet_header_consumed)
+	{
+		u16 packet_type = 0;
+		packet_copy.r_begin(packet_type);
+		if (packet_type != M_EVENT)
+			return;
+	}
+	u16 type = packet_copy.r_u16();
+	u16 dest = packet_copy.r_u16();
+
+	if (type == GE_DESTROY)
+		m_local_alife_replica_objects.erase(dest);
+}
+
 extern LPCSTR map_ver_string;
 
 LPSTR remove_version_option(LPCSTR opt_str, LPSTR new_opt_str, u32 new_opt_str_size)
@@ -87,6 +166,7 @@ void CLevel::ClientReceive()
 		{
 		case M_SPAWN:
 			{
+				on_local_alife_replica_spawn(*P);
 				if (!bReady) //!m_bGameConfigStarted || 
 				{
 					Msg("! Unconventional M_SPAWN received : map_data[%s] | bReady[%s] | deny_m_spawn[%s]",
@@ -105,6 +185,7 @@ void CLevel::ClientReceive()
 			}
 			break;
 		case M_EVENT:
+			on_local_alife_replica_event(*P, false);
 			/*if (!game_configured)
 			{
 				Msg("! WARNING: ignoring game event [%d] - game not configured...", m_type);
@@ -127,6 +208,7 @@ void CLevel::ClientReceive()
 					tmpP.B.count = P->r_u8();
 					P->r(&tmpP.B.data, tmpP.B.count);
 					tmpP.timeReceive = P->timeReceive;
+					on_local_alife_replica_event(tmpP, true);
 
 					game_events->insert(tmpP);
 					if (g_bDebugEvents) ProcessGameEvents();
@@ -321,6 +403,7 @@ void CLevel::ClientReceive()
 					if (received >= total)
 					{
 						m_host_object_id_map_sync_received = true;
+						bootstrap_local_alife_replica();
 						Msg("* host object id map synchronized: total=%u", total);
 					}
 
