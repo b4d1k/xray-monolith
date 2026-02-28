@@ -16,6 +16,7 @@ IC CGameGraph& CAI_Space::game_graph() const
 
 IC CGameGraph* CAI_Space::get_game_graph() const
 {
+	const_cast<CAI_Space*>(this)->ensure_game_graph();
 	return (m_game_graph);
 }
 
