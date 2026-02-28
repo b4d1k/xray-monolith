@@ -77,7 +77,9 @@ CALifeSimulator::CALifeSimulator(xrServer* server, shared_str* command_line) :
 
 	load(p.m_game_or_spawn, !xr_strcmp(p.m_new_or_load, "load") ? false : true, !xr_strcmp(p.m_new_or_load, "new"));
 }
-
+#include "alife_update_manager.h"
+#include "alife_spawn_registry.h"
+#include "Level.h"
 CALifeSimulator::CALifeSimulator(xrServer* server) :
 	CALifeUpdateManager(server, alife_section),
 	CALifeInteractionManager(server, alife_section),
@@ -88,6 +90,21 @@ CALifeSimulator::CALifeSimulator(xrServer* server) :
 	ai().set_alife(this);
 	reload(alife_section);
 
+    Msg("* Creating new game...");
+    spawns().load("all");
+    graph().on_load();
+    Msg("* Alife structure created.");
+
+    if (g_pGameLevel)
+	{
+		LPCSTR level_name = *Level().name();
+		if (level_name && level_name[0])
+		{
+			Msg("* client alife snapshot: loading AI map for level %s", level_name);
+			ai().load(level_name);
+		}
+	}
+
 	if (pSettings->line_exist(alife_section, "start_game_callback"))
 	{
 		LPCSTR start_game_callback = pSettings->r_string(alife_section, "start_game_callback");
@@ -95,9 +112,6 @@ CALifeSimulator::CALifeSimulator(xrServer* server) :
 		if (ai().script_engine().functor(start_game_callback, functor))
 			functor();
 	}
-
-	if (ai().get_game_graph())
-		graph().on_load();
 }
 
 CALifeSimulator::~CALifeSimulator()

@@ -9,6 +9,7 @@
 #include "client_spawn_manager.h"
 #include "../xrEngine/xr_object.h"
 #include "../xrEngine/IGame_Persistent.h"
+#include "moving_objects.h"
 
 
 CSE_Abstract* CLevel::client_spawn_se_by_id(u16 id) const
@@ -119,7 +120,7 @@ void CLevel::g_sv_Spawn(CSE_Abstract* E)
 #ifdef DEBUG
 	//	Msg					("* CLIENT: Spawn: %s, ID=%d", *E->s_name, E->ID);
 #endif
-
+    Msg("* CLIENT: Spawn: %s, ID=%d", *E->s_name, E->ID);
 	// Optimization for single-player only	- minimize traffic between client and server
 	if (GameID() == eGameIDSingle) psNET_Flags.set(NETFLAG_MINIMIZEUPDATES,TRUE);
 	else psNET_Flags.set(NETFLAG_MINIMIZEUPDATES,FALSE);

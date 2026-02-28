@@ -61,7 +61,7 @@ BOOL object::net_Spawn(CSE_Abstract* server_entity)
 	m_enter_min_enemy_distance = smart_cover->m_enter_min_enemy_distance;
     m_exit_min_enemy_distance = smart_cover->m_exit_min_enemy_distance;
 
-	if (ai().get_alife() && smart_cover->m_description.size())
+	if (ai().get_alife() && smart_cover->m_description.size() && OnServer())
 		m_cover = ai().cover_manager().add_smart_cover(smart_cover->m_description.c_str(), *this,
 		                                               smart_cover->m_is_combat_cover ? true : false,
 		                                               smart_cover->m_can_fire ? true : false,

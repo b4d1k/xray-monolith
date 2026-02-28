@@ -64,9 +64,28 @@ storage::~storage()
 
 void storage::collect_garbage()
 {
-	// NOTE:
-	// Runtime cleanup is intentionally disabled for stability during client bootstrap/spawn.
-	// Descriptions are released in storage dtor via delete_data(m_descriptions).
-	// Previous eager GC path could invalidate entries while smart-cover net spawn is in progress.
-	XR_UNUSED(time_to_delete);
+    struct garbage
+    {
+        static IC bool predicate(::description* const& object)
+        {
+            if (object->intrusive_ref_count())
+                return (false);
+
+            if (Device.dwTimeGlobal < object->m_last_time_dec + time_to_delete)
+                return (false);
+
+            ::description* temp = object;
+            xr_delete(temp);
+            return (true);
+        }
+    };
+
+    m_descriptions.erase(
+        std::remove_if(
+            m_descriptions.begin(),
+            m_descriptions.end(),
+            &garbage::predicate
+        ),
+        m_descriptions.end()
+    );
 }
