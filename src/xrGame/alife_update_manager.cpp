@@ -120,6 +120,9 @@ void CALifeUpdateManager::shedule_Update(u32 dt)
 {
 	ISheduled::shedule_Update(dt);
 
+	if (OnClient() && !OnServer())
+		return;
+
 	if (!initialized())
 		return;
 

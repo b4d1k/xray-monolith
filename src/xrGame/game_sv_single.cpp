@@ -66,7 +66,16 @@ bool game_sv_Single::TrySpawnCoopActor(ClientID id_who)
 	entity->s_flags.assign(M_SPAWN_OBJECT_LOCAL | M_SPAWN_OBJECT_ASPLAYER);
 	if (CSE_Visual* visual = smart_cast<CSE_Visual*>(entity))
 	{
-		visual->set_visual("actors\\stalker_neutral\\stalker_neutral_1.ogf");
+		if (pSettings->section_exist("mp_actor") && pSettings->line_exist("mp_actor", "visual"))
+		{
+			LPCSTR visual_name = pSettings->r_string("mp_actor", "visual");
+			visual->set_visual(visual_name);
+			Msg("* single/co-op bootstrap: mp_actor visual set to '%s'", visual_name);
+		}
+		else
+		{
+			Msg("! single/co-op bootstrap: mp_actor visual is not configured, keeping default '%s'", visual->get_visual());
+		}
 	}
 
 	if (CSE_ALifeCreatureActor* actor = smart_cast<CSE_ALifeCreatureActor*>(entity))

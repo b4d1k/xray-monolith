@@ -16,6 +16,7 @@
 #include "object_factory.h"
 #include "alife_object_registry.h"
 #include "alife_graph_registry.h"
+#include "level.h"
 #include "../xrEngine/xr_ioconsole.h"
 
 #ifdef DEBUG
@@ -83,9 +84,12 @@ CALifeSimulator::CALifeSimulator(xrServer* server) :
 	CALifeInteractionManager(server, alife_section),
 	CALifeSimulatorBase(server, alife_section)
 {
+	const bool pure_client_snapshot = OnClient() && !OnServer();
+
 	// Client-side snapshot ALife bootstrap must not reset script/menu globals.
 	// restart_all() is valid for full single-player ALife startup only.
-	ai().set_alife(this);
+	if (!pure_client_snapshot)
+		ai().set_alife(this);
 	reload(alife_section);
 
 	if (pSettings->line_exist(alife_section, "start_game_callback"))
@@ -96,8 +100,21 @@ CALifeSimulator::CALifeSimulator(xrServer* server) :
 			functor();
 	}
 
+	ai().ensure_game_graph();
 	if (ai().get_game_graph())
+	{
 		graph().on_load();
+
+		if (g_pGameLevel)
+		{
+			LPCSTR level_name = *Level().name();
+			if (level_name && level_name[0])
+			{
+				Msg("* client alife snapshot: loading AI map for level %s", level_name);
+				ai().load(level_name);
+			}
+		}
+	}
 }
 
 CALifeSimulator::~CALifeSimulator()
@@ -114,8 +131,12 @@ void CALifeSimulator::destroy()
 {
 	//	validate					();
 	CALifeUpdateManager::destroy();
-	VERIFY(ai().get_alife());
-	ai().set_alife(0);
+
+	if (!OnClient() || OnServer())
+	{
+		VERIFY(ai().get_alife());
+		ai().set_alife(0);
+	}
 }
 
 void CALifeSimulator::setup_simulator(CSE_ALifeObject* object)

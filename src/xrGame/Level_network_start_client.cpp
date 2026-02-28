@@ -269,7 +269,8 @@ bool CLevel::net_start_client6()
 
 	if (connected_to_server)
 	{
-		if (OnClient() && !OnServer() && !m_client_alife_simulator && !ai().get_alife())
+		if (OnClient() && !OnServer() && !m_client_alife_simulator && !ai().get_alife() &&
+		    strstr(Core.Params, "-client_alife_snapshot"))
 		{
 			m_client_alife_simulator = xr_new<CALifeSimulator>((xrServer*)nullptr);
 			Msg("* client alife snapshot: empty simulator created");

@@ -13,7 +13,12 @@ void xrServer::Process_update(NET_Packet& P, ClientID sender)
 	if (g_Dump_Update_Read) Msg("---- UPDATE_Read --- ");
 #endif // #ifndef MASTER_GOLD
 
-	R_ASSERT(CL->flags.bLocal);
+	if (!CL->flags.bLocal)
+	{
+		R_ASSERT2(IsGameTypeSingle(), "Process_update accepts remote sender only in single/listen mode");
+		// In listen/co-op single-host mode authoritative actor updates come from remote clients.
+		Msg("* Process_update: accepting remote client update from 0x%08x", CL->ID.value());
+	}
 	// while has information
 	while (!P.r_eof())
 	{
@@ -63,7 +68,11 @@ void xrServer::Process_save(NET_Packet& P, ClientID sender)
 	R_ASSERT2(CL, "Process_save client not found");
 	CL->net_Ready = TRUE;
 
-	R_ASSERT(CL->flags.bLocal);
+	if (!CL->flags.bLocal)
+	{
+		R_ASSERT2(IsGameTypeSingle(), "Process_save accepts remote sender only in single/listen mode");
+		Msg("* Process_save: accepting remote client save from 0x%08x", CL->ID.value());
+	}
 	// while has information
 	while (!P.r_eof())
 	{

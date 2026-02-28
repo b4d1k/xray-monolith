@@ -347,7 +347,26 @@ void xrServer::SendUpdatePacketsToAll()
 void xrServer::SendUpdatesToAll()
 {
 	if (IsGameTypeSingle())
-		return;
+	{
+		struct NonServerClientCounter
+		{
+			xrServer* owner;
+			u32 count;
+
+			NonServerClientCounter(xrServer* server) : owner(server), count(0) {}
+
+			void operator()(IClient* client)
+			{
+				if (client != owner->GetServerClient())
+					++count;
+			}
+		};
+
+		NonServerClientCounter counter(this);
+		ForEachClientDo(counter);
+		if (!counter.count)
+			return;
+	}
 
 	KickCheaters();
 

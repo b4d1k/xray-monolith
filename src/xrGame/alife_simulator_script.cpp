@@ -368,13 +368,15 @@ CSE_ALifeCreatureActor* get_actor(const CALifeSimulator* self)
 	}
 
 	// Final compatibility fallback for early client bootstrap:
-	// provide a synthetic actor server entity with alias id=0 so legacy scripts
-	// that do `alife():actor().id` won't crash before real ALife actor arrives.
+	// provide a synthetic actor server entity so legacy scripts that call
+	// `alife():actor()` won't crash before real ALife actor arrives.
+	// IMPORTANT: use invalid id (0xffff), do not alias to 0 to avoid collisions
+	// with network/game logic that may treat id=0 as a real authoritative actor.
 	static CSE_ALifeCreatureActor* s_client_actor_stub = nullptr;
 	if (!s_client_actor_stub)
 	{
 		s_client_actor_stub = xr_new<CSE_ALifeCreatureActor>("mp_actor");
-		s_client_actor_stub->ID = 0;
+		s_client_actor_stub->ID = 0xffff;
 		s_client_actor_stub->ID_Parent = 0xffff;
 		s_client_actor_stub->set_name_replace("mp_actor_client_stub");
 	}

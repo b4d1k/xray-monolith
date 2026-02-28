@@ -337,8 +337,17 @@ BOOL CBaseMonster::net_Spawn(CSE_Abstract* DC)
 		return (FALSE);
 
 	CSE_Abstract* e = (CSE_Abstract*)(DC);
-	R_ASSERT2(ai().get_level_graph() && ai().get_cross_table() && (ai().level_graph().level_id() != u32(-1)),
-	          "There is no AI-Map, level graph, cross table, or graph is not compiled into the game graph!");
+	ai().ensure_level_graph(*Level().name());
+	const bool has_level_graph = ai().get_level_graph() && (ai().level_graph().level_id() != u32(-1));
+	const bool has_cross_table = ai().get_cross_table();
+	if (!has_level_graph || !has_cross_table)
+	{
+		if (OnClient())
+			Msg("! [base_monster] net_Spawn: AI map is missing on client, continue with limited AI init for [%s]", *cName());
+		else
+			R_ASSERT2(false,
+			          "There is no AI-Map, level graph, cross table, or graph is not compiled into the game graph!");
+	}
 	monster_squad().register_member((u8)g_Team(), (u8)g_Squad(), (u8)g_Group(), this);
 	settings_overrides();
 

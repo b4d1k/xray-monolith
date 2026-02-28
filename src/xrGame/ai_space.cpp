@@ -20,6 +20,7 @@
 #include "alife_simulator.h"
 #include "moving_objects.h"
 #include "doors_manager.h"
+#include "../xrEngine/IGame_Persistent.h"
 #include "../xrEngine/dedicated_server_only.h"
 #include "../xrEngine/no_single.h"
 
@@ -39,6 +40,7 @@ CAI_Space::CAI_Space()
 	m_script_engine = 0;
 	m_moving_objects = 0;
 	m_doors_manager = 0;
+	m_game_graph_owner = false;
 }
 
 void CAI_Space::init()
@@ -68,6 +70,8 @@ void CAI_Space::init()
 	m_script_engine = xr_new<CScriptEngine>();
 	script_engine().init();
 
+	ensure_game_graph();
+
 #ifndef NO_SINGLE
 	extern string4096 g_ca_stdout;
 	setvbuf(stderr, g_ca_stdout,_IOFBF, sizeof(g_ca_stdout));
@@ -92,6 +96,10 @@ CAI_Space::~CAI_Space()
 	xr_delete(m_cover_manager);
 	xr_delete(m_graph_engine);
 	xr_delete(m_ef_storage);
+
+	if (m_game_graph_owner)
+		xr_delete(m_game_graph);
+	m_game_graph_owner = false;
 	VERIFY(!m_game_graph);
 }
 
@@ -214,6 +222,11 @@ void CAI_Space::patrol_path_storage(IReader& stream)
 void CAI_Space::set_alife(CALifeSimulator* alife_simulator)
 {
 	VERIFY((!m_alife_simulator && alife_simulator) || (m_alife_simulator && !alife_simulator));
+	if (alife_simulator && m_game_graph_owner)
+	{
+		xr_delete(m_game_graph);
+		m_game_graph_owner = false;
+	}
 	m_alife_simulator = alife_simulator;
 
 	VERIFY(!alife_simulator || !m_game_graph);
@@ -229,8 +242,14 @@ void CAI_Space::game_graph(CGameGraph* game_graph)
 {
 	VERIFY(m_alife_simulator);
 	VERIFY(game_graph);
-	VERIFY(!m_game_graph);
+	if (m_game_graph)
+	{
+		VERIFY(m_game_graph_owner);
+		xr_delete(m_game_graph);
+		m_game_graph_owner = false;
+	}
 	m_game_graph = game_graph;
+	m_game_graph_owner = false;
 
 	//	VERIFY					(!m_graph_engine);
 	xr_delete(m_graph_engine);
@@ -244,5 +263,130 @@ const CGameLevelCrossTable& CAI_Space::cross_table() const
 
 const CGameLevelCrossTable* CAI_Space::get_cross_table() const
 {
-	return (&game_graph().cross_table());
+	if (!m_game_graph)
+		return (0);
+
+	return (&m_game_graph->cross_table());
+}
+
+bool CAI_Space::ensure_game_graph()
+{
+	auto load_from_spawn = [&](LPCSTR spawn_name) -> bool
+	{
+		if (!spawn_name || !spawn_name[0])
+			return false;
+
+		string_path spawn_file_name;
+		if (!FS.exist(spawn_file_name, "$game_spawn$", spawn_name, ".spawn"))
+			return false;
+
+		IReader* spawn_reader = FS.r_open(spawn_file_name);
+		if (!spawn_reader)
+			return false;
+
+		IReader* graph_chunk = spawn_reader->open_chunk(4);
+		if (!graph_chunk)
+		{
+			FS.r_close(spawn_reader);
+			return false;
+		}
+
+		m_game_graph = xr_new<CGameGraph>(*graph_chunk);
+		m_game_graph_owner = true;
+		graph_chunk->close();
+		FS.r_close(spawn_reader);
+		Msg("* [ai_space] ensure_game_graph success: loaded graph from %s", spawn_file_name);
+		return true;
+	};
+
+	if (g_dedicated_server)
+		return false;
+
+	if (m_game_graph)
+		return true;
+
+	if (m_alife_simulator)
+	{
+		Msg("! [ai_space] ensure_game_graph: ALife is active and game graph is missing");
+		return false;
+	}
+
+	Msg("* [ai_space] ensure_game_graph: trying to load graph");
+
+	string_path game_graph_file_name;
+	FS.update_path(game_graph_file_name, "$game_data$", "game.graph");
+	if (!FS.exist(game_graph_file_name))
+	{
+		Msg("! [ai_space] ensure_game_graph: file not found (%s), trying all.spawn", game_graph_file_name);
+
+		if (load_from_spawn(g_pGamePersistent ? g_pGamePersistent->m_game_params.m_game_or_spawn : ""))
+			return true;
+
+		if (load_from_spawn("all"))
+			return true;
+
+		Msg("! [ai_space] ensure_game_graph failed: no graph source available");
+		return false;
+	}
+
+	IReader* stream = FS.r_open(game_graph_file_name);
+	if (!stream)
+	{
+		Msg("! [ai_space] ensure_game_graph failed: FS.r_open(%s) returned null", game_graph_file_name);
+		return false;
+	}
+
+	m_game_graph = xr_new<CGameGraph>(*stream);
+	m_game_graph_owner = true;
+	FS.r_close(stream);
+	Msg("* [ai_space] ensure_game_graph success: game graph loaded");
+
+	return true;
+}
+
+bool CAI_Space::ensure_level_graph(LPCSTR level_name)
+{
+	if (g_dedicated_server)
+		return false;
+
+	Msg("* [ai_space] ensure_level_graph: requested level '%s'", level_name ? level_name : "<null>");
+
+	if (!ensure_game_graph())
+		Msg("! [ai_space] ensure_level_graph: game graph is unavailable");
+
+	if (get_level_graph() && get_cross_table() && (level_graph().level_id() != u32(-1)))
+	{
+		Msg("* [ai_space] ensure_level_graph: level graph already initialized (level_id=%u)", level_graph().level_id());
+		return true;
+	}
+
+	if (!m_game_graph || !level_name || !level_name[0])
+	{
+		Msg("! [ai_space] ensure_level_graph failed: invalid state (game_graph=%s, level_name=%s)",
+		    m_game_graph ? "yes" : "no", (level_name && level_name[0]) ? level_name : "<empty>");
+		return false;
+	}
+
+	if (!m_game_graph->header().level(level_name, true))
+	{
+		Msg("! [ai_space] ensure_level_graph failed: level '%s' is absent in game.graph", level_name);
+		return false;
+	}
+
+	const bool loading_saved_game =
+		g_pGamePersistent &&
+		!xr_strcmp(g_pGamePersistent->m_game_params.m_new_or_load, "load");
+
+	if (m_alife_simulator && loading_saved_game)
+	{
+		Msg("! [ai_space] ensure_level_graph skipped: save-load ALife path should provide level graph");
+		return false;
+	}
+
+	Msg("* [ai_space] ensure_level_graph: loading level graph for '%s'", level_name);
+	load(level_name);
+
+	const bool result = (get_level_graph() && get_cross_table() && (level_graph().level_id() != u32(-1)));
+	Msg("* [ai_space] ensure_level_graph result: %s", result ? "success" : "failed");
+	return result;
 }

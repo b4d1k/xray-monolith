@@ -44,6 +44,7 @@ private:
 	CPatrolPathStorage* m_patrol_path_storage;
 	moving_objects* m_moving_objects;
 	doors::manager* m_doors_manager;
+	bool m_game_graph_owner;
 
 private:
 	void load(LPCSTR level_name);
@@ -72,6 +73,8 @@ public:
 	IC CScriptEngine& script_engine() const;
 	IC moving_objects& moving_objects() const;
 	IC doors::manager& doors() const;
+	bool ensure_game_graph();
+	bool ensure_level_graph(LPCSTR level_name);
 
 #ifdef DEBUG
 			void						validate				(const u32			level_id) const;

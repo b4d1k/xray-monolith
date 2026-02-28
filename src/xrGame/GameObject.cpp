@@ -682,7 +682,17 @@ u32 CGameObject::new_level_vertex_id() const
 void CGameObject::update_ai_locations(bool decrement_reference)
 {
 	u32 l_dwNewLevelVertexID = new_level_vertex_id();
-	VERIFY(ai().level_graph().valid_vertex_id(l_dwNewLevelVertexID));
+	if (!ai().level_graph().valid_vertex_id(l_dwNewLevelVertexID))
+	{
+		Msg("! CGameObject::update_ai_locations: invalid level vertex for '%s' [%s], pos=(%f,%f,%f), old_vertex=%u",
+		    *cName(),
+		    *cNameSect(),
+		    Position().x,
+		    Position().y,
+		    Position().z,
+		    ai_location().level_vertex_id());
+		return;
+	}
 	if (decrement_reference && (ai_location().level_vertex_id() == l_dwNewLevelVertexID))
 		return;
 

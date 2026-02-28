@@ -61,6 +61,7 @@
 #include "smart_cover_animation_planner.h"
 #include "smart_cover_planner_target_selector.h"
 #include "../../../xrEngine/CameraBase.h"
+#include "../../Level.h"
 
 #ifdef DEBUG
 #	include "../../alife_simulator.h"
@@ -701,6 +702,8 @@ BOOL CAI_Stalker::net_Spawn(CSE_Abstract* DC)
 		angle_normalize_signed(-tpHuman->o_torso.yaw);
 	movement().m_body.current.pitch = movement().m_body.target.pitch = 0;
 
+	ai().ensure_level_graph(*Level().name());
+
 	if (ai().get_game_graph())
 	{
 		if (ai().game_graph().valid_vertex_id(tpHuman->m_tGraphID))
@@ -717,11 +720,14 @@ BOOL CAI_Stalker::net_Spawn(CSE_Abstract* DC)
 		ai_location().game_vertex(ai().cross_table().vertex(ai_location().level_vertex_id()).game_vertex_id());
 	}
 
-	R_ASSERT2(
-		ai().get_level_graph() &&
-		(ai().level_graph().level_id() != u32(-1)),
-		"There is no AI-Map or level graph is not initialized!"
-	);
+	const bool has_level_graph = ai().get_level_graph() && (ai().level_graph().level_id() != u32(-1));
+	if (!has_level_graph)
+	{
+		if (OnClient())
+			Msg("! [ai_stalker] net_Spawn: level graph is missing on client, continue with limited AI init for [%s]", *cName());
+		else
+			R_ASSERT2(false, "There is no AI-Map or level graph is not initialized!");
+	}
 	setEnabled(TRUE);
 
 
