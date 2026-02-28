@@ -265,21 +265,39 @@ const CGameLevelCrossTable* CAI_Space::get_cross_table() const
 
 bool CAI_Space::ensure_game_graph()
 {
-	if (g_dedicated_server || m_game_graph || m_alife_simulator)
-		return !!m_game_graph;
+	if (g_dedicated_server)
+		return false;
+
+	if (m_game_graph)
+		return true;
+
+	if (m_alife_simulator)
+	{
+		Msg("! [ai_space] ensure_game_graph skipped: ALife simulator owns graph context");
+		return false;
+	}
+
+	Msg("* [ai_space] ensure_game_graph: trying to load game.graph");
 
 	string_path game_graph_file_name;
 	FS.update_path(game_graph_file_name, "$game_data$", "game.graph");
 	if (!FS.exist(game_graph_file_name))
+	{
+		Msg("! [ai_space] ensure_game_graph failed: file not found (%s)", game_graph_file_name);
 		return false;
+	}
 
 	IReader* stream = FS.r_open(game_graph_file_name);
 	if (!stream)
+	{
+		Msg("! [ai_space] ensure_game_graph failed: FS.r_open(%s) returned null", game_graph_file_name);
 		return false;
+	}
 
 	m_game_graph = xr_new<CGameGraph>(*stream);
 	m_game_graph_owner = true;
 	FS.r_close(stream);
+	Msg("* [ai_space] ensure_game_graph success: game graph loaded");
 
 	return true;
 }
@@ -289,18 +307,34 @@ bool CAI_Space::ensure_level_graph(LPCSTR level_name)
 	if (g_dedicated_server)
 		return false;
 
-	ensure_game_graph();
+	Msg("* [ai_space] ensure_level_graph: requested level '%s'", level_name ? level_name : "<null>");
+
+	if (!ensure_game_graph())
+		Msg("! [ai_space] ensure_level_graph: game graph is unavailable");
 
 	if (get_level_graph() && get_cross_table() && (level_graph().level_id() != u32(-1)))
+	{
+		Msg("* [ai_space] ensure_level_graph: level graph already initialized (level_id=%u)", level_graph().level_id());
 		return true;
+	}
 
-	if (m_alife_simulator || !m_game_graph || !level_name || !level_name[0])
+	if (!m_game_graph || !level_name || !level_name[0])
+	{
+		Msg("! [ai_space] ensure_level_graph failed: invalid state (game_graph=%s, level_name=%s)",
+		    m_game_graph ? "yes" : "no", (level_name && level_name[0]) ? level_name : "<empty>");
 		return false;
+	}
 
 	if (!m_game_graph->header().level(level_name, true))
+	{
+		Msg("! [ai_space] ensure_level_graph failed: level '%s' is absent in game.graph", level_name);
 		return false;
+	}
 
+	Msg("* [ai_space] ensure_level_graph: loading level graph for '%s'", level_name);
 	load(level_name);
 
-	return (get_level_graph() && get_cross_table() && (level_graph().level_id() != u32(-1)));
+	const bool result = (get_level_graph() && get_cross_table() && (level_graph().level_id() != u32(-1)));
+	Msg("* [ai_space] ensure_level_graph result: %s", result ? "success" : "failed");
+	return result;
 }
