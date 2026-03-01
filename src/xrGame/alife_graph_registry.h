@@ -54,7 +54,6 @@ protected:
 	CSE_ALifeCreatureActor* m_actor;
 	float m_process_time;
 	xr_vector<CSE_ALifeDynamicObject*> m_temp;
-
 protected:
 	void setup_current_level();
 	template <typename F, typename C>
@@ -76,6 +75,7 @@ public:
 	               GameGraph::_GRAPH_ID next_game_vertex_id);
 	IC CALifeLevelRegistry& level() const;
 	IC void set_process_time(const float& process_time);
+    IC void set_actor(CSE_ALifeCreatureActor* actor);
 	IC CSE_ALifeCreatureActor* actor() const;
 	IC const GRAPH_REGISTRY& objects() const;
 	template <typename F>

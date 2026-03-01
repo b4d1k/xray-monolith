@@ -35,9 +35,6 @@ SPAWN_STORY_PAIRS spawn_story_ids;
 
 CALifeSimulator* alife()
 {
-//	if (Level().IsClient() && !Level().IsServer())
-//		return nullptr;
-
 	return (const_cast<CALifeSimulator*>(ai().get_alife()));
 }
 
@@ -343,42 +340,7 @@ LPCSTR get_level_name(const CALifeSimulator* self, int level_id)
 CSE_ALifeCreatureActor* get_actor(const CALifeSimulator* self)
 {
 	THROW(self);
-
-	if (CSE_ALifeCreatureActor* actor = self->graph().actor())
-		return actor;
-
-	if (CSE_ALifeCreatureActor* actor0 = smart_cast<CSE_ALifeCreatureActor*>(self->objects().object(0, true)))
-		return actor0;
-
-	CActor* game_actor = smart_cast<CActor*>(Level().CurrentEntity());
-	if (!game_actor)
-		game_actor = smart_cast<CActor*>(Level().CurrentControlEntity());
-
-	if (!game_actor)
-		return nullptr;
-
-	CSE_ALifeDynamicObject* se_object = self->objects().object(game_actor->ID(), true);
-	if (CSE_ALifeCreatureActor* se_actor = smart_cast<CSE_ALifeCreatureActor*>(se_object))
-		return se_actor;
-
-	for (const auto& it : self->objects().objects())
-	{
-		if (CSE_ALifeCreatureActor* fallback = smart_cast<CSE_ALifeCreatureActor*>(it.second))
-			return fallback;
-	}
-
-	// Final compatibility fallback for early client bootstrap:
-	// provide a synthetic actor server entity with alias id=0 so legacy scripts
-	// that do `alife():actor().id` won't crash before real ALife actor arrives.
-	static CSE_ALifeCreatureActor* s_client_actor_stub = nullptr;
-	if (!s_client_actor_stub)
-	{
-		s_client_actor_stub = xr_new<CSE_ALifeCreatureActor>("mp_actor");
-		s_client_actor_stub->ID = 0xffff;
-		s_client_actor_stub->ID_Parent = 0xffff;
-		s_client_actor_stub->set_name_replace("mp_actor_client_stub");
-	}
-	return s_client_actor_stub;
+    return (self->graph().actor());
 }
 
 KNOWN_INFO_VECTOR* registry(const CALifeSimulator* self, const ALife::_OBJECT_ID& id)

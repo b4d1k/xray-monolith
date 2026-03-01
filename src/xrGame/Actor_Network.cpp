@@ -51,6 +51,10 @@
 #	include "../xrPhysics/phvalide.h"
 #endif
 
+#include "ai_space.h"
+#include "alife_graph_registry.h"
+#include "alife_simulator.h"
+
 int g_cl_InterpolationType = 0;
 u32 g_cl_InterpolationMaxPoints = 0;
 int g_dwInputUpdateDelta = 20;
@@ -510,6 +514,8 @@ void CActor::net_Import_Physic_proceed()
 
 BOOL CActor::net_Spawn(CSE_Abstract* DC)
 {
+    Msg("CActor::net_Spawn");
+
 	m_holder_id = ALife::_OBJECT_ID(-1);
 	m_feel_touch_characters = 0;
 	m_snd_noise = 0.0f;
@@ -528,8 +534,31 @@ BOOL CActor::net_Spawn(CSE_Abstract* DC)
 		E->s_flags.set(M_SPAWN_OBJECT_LOCAL, TRUE);
 	}
 
-	if (TRUE == E->s_flags.test(M_SPAWN_OBJECT_LOCAL) && TRUE == E->s_flags.is(M_SPAWN_OBJECT_ASPLAYER))
-		g_actor = this;
+    Msg("CActor::net_Spawn [%d]", e->ID);
+
+    if (TRUE == E->s_flags.test(M_SPAWN_OBJECT_LOCAL) && TRUE == E->s_flags.is(M_SPAWN_OBJECT_ASPLAYER) && g_actor == nullptr)
+    {
+        g_actor = this;
+        Msg("Set g_actor %d", ID());
+    }
+
+    // single/co-op client fallback: if actor is local but ASPLAYER flag was lost/late,
+	// bind global actor pointer and current entities from object locality.
+	if (OnClient() && !OnServer() && e->ID == 0)
+	{
+        Msg("Set g_actor ON CLIENT %d", ID());
+
+		if (g_actor != this)
+			g_actor = this;
+
+        Level().SetControlEntity(this);
+        Level().SetEntity(this);
+		
+        const_cast<CALifeGraphRegistry&>(ai().alife().graph()).set_actor(E);
+        Msg("set alife graph actor");
+	}
+
+    Msg("Actor ID = %d [%d] %d", Actor()->ID(), E->ID, ID());
 
 	VERIFY(m_pActorEffector == NULL);
 

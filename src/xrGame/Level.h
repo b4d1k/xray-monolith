@@ -180,6 +180,7 @@ private:
 
 public:
 	void PrefetchSound(const char* name);
+    u16 host_actor_server_id() const { return m_host_actor_server_id; }
 
 protected:
 	bool net_start_result_total;

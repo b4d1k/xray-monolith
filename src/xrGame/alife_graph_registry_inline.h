@@ -47,6 +47,11 @@ IC void CALifeGraphRegistry::set_process_time(const float& process_time)
 		level().set_process_time(m_process_time);
 }
 
+IC void CALifeGraphRegistry::set_actor(CSE_ALifeCreatureActor* actor)
+{
+    m_actor = actor;
+}
+
 IC CSE_ALifeCreatureActor* CALifeGraphRegistry::actor() const
 {
 	return (m_actor);
