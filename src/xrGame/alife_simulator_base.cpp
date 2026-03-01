@@ -203,10 +203,13 @@ void CALifeSimulatorBase::create(CSE_ALifeDynamicObject*& i, CSE_ALifeDynamicObj
 	R_ASSERT3(!(i->used_ai_locations()) || (i->m_tNodeID != u32(-1)), "Invalid vertex for object ", i->name_replace());
 
 	i->m_tSpawnID = tSpawnID;
-	if (!graph().actor() && smart_cast<CSE_ALifeCreatureActor*>(i))
-		i->ID = 0;
-	else
-		i->ID = server().PerformIDgen(0xffff);
+    if (OnServer())
+    {
+        if (!graph().actor() && smart_cast<CSE_ALifeCreatureActor*>(i))
+            i->ID = 0;
+        else
+            i->ID = server().PerformIDgen(0xffff);
+    }
 
 	register_object(i, true);
 	i->m_bALifeControl = true;

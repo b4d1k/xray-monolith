@@ -346,8 +346,32 @@ void xrServer::SendUpdatePacketsToAll()
 
 void xrServer::SendUpdatesToAll()
 {
-	if (IsGameTypeSingle())
-		return;
+	//if (IsGameTypeSingle())
+	//	return;
+
+    if (OnClient() && !OnServer())
+    {
+        Msg("SendUpdatesToAll: Only Server!");
+        return;
+    }
+
+    // In single/listen co-op mode many server-owned entities never send client-originated
+    // M_UPDATE packets, so their per-entity net_Ready flag can remain false forever.
+    // Force readiness here to keep authoritative host state flowing to remote clients.
+    for (xrS_entities::iterator it = entities.begin(); it != entities.end(); ++it)
+    {
+        CSE_Abstract * entity = it->second;
+        if (!entity)
+            continue;
+    
+        if (!entity->owner)
+            continue;
+    
+        if (entity->s_flags.is(M_SPAWN_OBJECT_PHANTOM))
+            continue;
+    
+        entity->net_Ready = TRUE;
+    }
 
 	KickCheaters();
 

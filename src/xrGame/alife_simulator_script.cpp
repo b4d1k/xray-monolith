@@ -374,7 +374,7 @@ CSE_ALifeCreatureActor* get_actor(const CALifeSimulator* self)
 	if (!s_client_actor_stub)
 	{
 		s_client_actor_stub = xr_new<CSE_ALifeCreatureActor>("mp_actor");
-		s_client_actor_stub->ID = 0;
+		s_client_actor_stub->ID = 0xffff;
 		s_client_actor_stub->ID_Parent = 0xffff;
 		s_client_actor_stub->set_name_replace("mp_actor_client_stub");
 	}
