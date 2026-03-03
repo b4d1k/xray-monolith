@@ -109,6 +109,8 @@ bool CLevel::net_start1()
 	// Start client and server if need it
 	if (m_caServerOptions.size())
 	{
+		m_authoritative_server = true;
+		m_local_server_replica = false;
 		//		g_pGamePersistent->LoadTitle("st_server_starting");
 
 		typedef IGame_Persistent::params params;
@@ -145,6 +147,8 @@ bool CLevel::net_start1()
 	}
 	else
 	{
+		m_authoritative_server = false;
+		m_local_server_replica = false;
 		g_allow_heap_min = false;
 	}
 	return true;

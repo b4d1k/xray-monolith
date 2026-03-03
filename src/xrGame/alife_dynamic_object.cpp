@@ -266,7 +266,7 @@ void CSE_ALifeInventoryBox::add_offline(const xr_vector<ALife::_OBJECT_ID>& save
 #endif
 
 		ALife::_OBJECT_ID item_id = inventory_item->base()->ID;
-		inventory_item->base()->ID = object->alife().server().PerformIDgen(item_id);
+		inventory_item->base()->ID = object->alife().request_id_from_server(item_id);
 
 		if (!child->can_save())
 		{

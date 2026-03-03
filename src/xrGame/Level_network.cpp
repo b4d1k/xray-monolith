@@ -171,6 +171,8 @@ void CLevel::net_Stop()
 		Server->Disconnect();
 		xr_delete(Server);
 	}
+	m_authoritative_server = false;
+	m_local_server_replica = false;
 
 	if (!g_dedicated_server)
 		ai().script_engine().collect_all_garbage();
@@ -415,6 +417,8 @@ bool CLevel::Connect2Server(const char* options)
 			Server->Disconnect();
 			xr_delete(Server);
 		}
+		m_authoritative_server = false;
+		m_local_server_replica = false;
 		OnConnectRejected();
 		Disconnect();
 		return FALSE;

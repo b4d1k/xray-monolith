@@ -60,6 +60,14 @@ void CALifeSimulatorBase::destroy()
 	unload();
 }
 
+ALife::_OBJECT_ID CALifeSimulatorBase::request_id_from_server(const ALife::_OBJECT_ID& current_id)
+{
+	if (m_server)
+		return m_server->PerformIDgen(current_id);
+
+	return current_id;
+}
+
 void CALifeSimulatorBase::unload()
 {
 	xr_delete(m_objects);
