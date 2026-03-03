@@ -97,6 +97,7 @@ public:
 	IC xrServer& server() const;
 	IC const CALifeTimeManager& time_manager() const;
 	IC shared_str* server_command_line() const;
+	virtual ALife::_OBJECT_ID request_id_from_server(const ALife::_OBJECT_ID& current_id);
 	template <typename T>
 	IC T& registry(T* t) const;
 

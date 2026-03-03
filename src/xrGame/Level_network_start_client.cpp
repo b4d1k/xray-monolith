@@ -271,8 +271,16 @@ bool CLevel::net_start_client6()
 	{
 		if (OnClient() && !OnServer() && !m_client_alife_simulator && !ai().get_alife())
 		{
-			m_client_alife_simulator = xr_new<CALifeSimulator>((xrServer*)nullptr);
-			Msg("* client alife snapshot: empty simulator created");
+			if (!Server)
+			{
+				Server = xr_new<xrServer>();
+				m_local_server_replica = true;
+				m_authoritative_server = false;
+				Msg("* client server replica: local snapshot server created");
+			}
+
+			m_client_alife_simulator = xr_new<CALifeSimulator>(Server);
+			Msg("* client alife snapshot: simulator created with local server replica");
 		}
 
 		// Sync

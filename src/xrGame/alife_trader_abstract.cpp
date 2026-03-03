@@ -260,7 +260,7 @@ void add_offline_impl(CSE_ALifeDynamicObject* object, const xr_vector<ALife::_OB
 #endif
 
 		ALife::_OBJECT_ID item_id = inventory_item->base()->ID;
-		inventory_item->base()->ID = object->alife().server().PerformIDgen(item_id);
+		inventory_item->base()->ID = object->alife().request_id_from_server(item_id);
 
 		if (!child->can_save())
 		{

@@ -168,6 +168,8 @@ public:
 	NET_Queue_Event* game_events = nullptr;
 	xr_deque<CSE_Abstract*> game_spawn_queue;
 	xrServer* Server = nullptr;
+	bool m_authoritative_server = false;
+	bool m_local_server_replica = false;
 	CALifeSimulator* m_client_alife_simulator = nullptr;
 	GlobalFeelTouch m_feel_deny;
 	CZoneList* hud_zones_list = nullptr;
@@ -372,6 +374,8 @@ public:
 	IC CBulletManager& BulletManager() { return *m_pBulletManager; }
 	bool IsServer();
 	bool IsClient();
+	bool IsAuthoritativeServer() const;
+	bool HasLocalServerReplica() const;
 	CSE_Abstract* spawn_item(LPCSTR section, const Fvector& position, u32 level_vertex_id, u16 parent_id,
 	                         bool return_item = false);
 

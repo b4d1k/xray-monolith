@@ -1735,20 +1735,28 @@ void CLevel::SetEnvironmentGameTimeFactor(u64 const& GameTime, float const& fTim
 	game->SetEnvironmentGameTimeFactor(GameTime, fTimeFactor);
 }
 
+bool CLevel::IsAuthoritativeServer() const
+{
+	return m_authoritative_server;
+}
+
+bool CLevel::HasLocalServerReplica() const
+{
+	return m_local_server_replica;
+}
+
 bool CLevel::IsServer()
 {
 	if (!Server || IsDemoPlayStarted())
 		return false;
-	return true;
+	return IsAuthoritativeServer();
 }
 
 bool CLevel::IsClient()
 {
 	if (IsDemoPlayStarted())
 		return true;
-	if (Server)
-		return false;
-	return true;
+	return !IsAuthoritativeServer();
 }
 
 void CLevel::OnAlifeSimulatorUnLoaded()
